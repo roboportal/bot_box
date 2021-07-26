@@ -1,0 +1,209 @@
+package bot
+
+import (
+	"encoding/json"
+	"log"
+
+	"github.com/malykhin/warbots/arena_controller/pkg/botcom"
+	"github.com/malykhin/warbots/arena_controller/pkg/utils"
+	"github.com/pion/mediadevices"
+	"github.com/pion/webrtc/v3"
+)
+
+const (
+	Idle       = "Idle"
+	Connecting = "Connecting"
+	Connected  = "Connected"
+)
+
+type ABot struct {
+	QuitWebRTCChan            chan struct{}
+	WebRTCConnectionStateChan chan string
+	DescriptionChan           chan webrtc.SessionDescription
+	CandidateChan             chan webrtc.ICECandidateInit
+	ArenaDescriptionChan      chan webrtc.SessionDescription
+	ArenaCandidateChan        chan webrtc.ICECandidateInit
+	SendDataChan              chan string
+	ControlsReadyChan         chan bool
+	AllowControlsChan         chan bool
+	ID                        int
+	Status                    string
+	ConnectionID              string
+	IsReady                   bool
+}
+
+func (b *ABot) SetIdle() {
+	b.Status = Idle
+}
+
+func (b *ABot) SetConnecting() {
+	b.Status = Connecting
+}
+
+func (b *ABot) SetConnected() {
+	b.Status = Connected
+}
+
+func (b *ABot) Run(
+	stunUrls []string,
+	tokenString string,
+	publicKey string,
+	api *webrtc.API,
+	mediaStream mediadevices.MediaStream,
+	wsWrite chan string,
+	serialWrite chan string,
+	serialRead chan string,
+	areControlsAllowedBySupervisor *bool,
+) {
+
+	type CreateConnectionPayload struct {
+		Token     string `json:"token"`
+		PublicKey string `json:"publicKey"`
+		ID        int    `json:"id"`
+	}
+
+	type CreateConnectionAction struct {
+		Name    string                  `json:"name"`
+		Payload CreateConnectionPayload `json:"payload"`
+	}
+
+	log.Println("Creating connection for bot: ", b.ID)
+	message := CreateConnectionAction{
+		Name: "CREATE_CONNECTION",
+		Payload: CreateConnectionPayload{
+			Token:     tokenString,
+			PublicKey: publicKey,
+			ID:        b.ID,
+		},
+	}
+
+	br, err := json.Marshal(message)
+
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	wsWrite <- string(br)
+
+	go botcom.Init(
+		b.ID,
+		stunUrls,
+		api,
+		mediaStream,
+		b.DescriptionChan,
+		b.CandidateChan,
+		b.ArenaDescriptionChan,
+		b.ArenaCandidateChan,
+		b.WebRTCConnectionStateChan,
+		b.SendDataChan,
+		b.QuitWebRTCChan,
+		serialWrite,
+		b.ControlsReadyChan,
+		areControlsAllowedBySupervisor,
+		&b.IsReady,
+	)
+
+	for {
+		select {
+
+		case description := <-b.ArenaDescriptionChan:
+			type SetDescriptionPayload struct {
+				Token       string                    `json:"token"`
+				PublicKey   string                    `json:"publicKey"`
+				Description webrtc.SessionDescription `json:"description"`
+				ID          int                       `json:"id"`
+			}
+
+			type SetOfferAction struct {
+				Name    string                `json:"name"`
+				Payload SetDescriptionPayload `json:"payload"`
+			}
+
+			log.Println("Sending answer for bot: ", b.ID)
+			message := SetOfferAction{
+				Name: "SET_DESCRIPTION",
+				Payload: SetDescriptionPayload{
+					Token:       tokenString,
+					PublicKey:   publicKey,
+					Description: description,
+					ID:          b.ID,
+				},
+			}
+
+			b, err := json.Marshal(message)
+
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			wsWrite <- string(b)
+
+		case candidate := <-b.ArenaCandidateChan:
+			type SetCandidatePayload struct {
+				Token     string                  `json:"token"`
+				PublicKey string                  `json:"publicKey"`
+				Candidate webrtc.ICECandidateInit `json:"candidate"`
+				ID        int                     `json:"id"`
+			}
+
+			type SetCandidateAction struct {
+				Name    string              `json:"name"`
+				Payload SetCandidatePayload `json:"payload"`
+			}
+
+			log.Println("Sending candidate for bot: ", b.ID)
+			message := SetCandidateAction{
+				Name: "SET_CANDIDATE",
+				Payload: SetCandidatePayload{
+					Token:     tokenString,
+					PublicKey: publicKey,
+					Candidate: candidate,
+					ID:        b.ID,
+				},
+			}
+
+			b, err := json.Marshal(message)
+
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			wsWrite <- string(b)
+
+		case state := <-b.WebRTCConnectionStateChan:
+			if state == webrtc.ICEConnectionStateConnected.String() {
+				b.SetConnected()
+			}
+			if state == webrtc.ICEConnectionStateFailed.String() ||
+				state == webrtc.ICEConnectionStateDisconnected.String() ||
+				state == webrtc.ICEConnectionStateClosed.String() {
+				b.SetIdle()
+				b.ConnectionID = ""
+				go utils.TriggerChannel(b.QuitWebRTCChan)
+			}
+
+		case state := <-b.ControlsReadyChan:
+			log.Println("Bot ready:", b.ID, state)
+			b.IsReady = state
+		}
+	}
+}
+
+func Factory(id int) ABot {
+	return ABot{
+		QuitWebRTCChan:            make(chan struct{}),
+		WebRTCConnectionStateChan: make(chan string),
+		DescriptionChan:           make(chan webrtc.SessionDescription, 100),
+		CandidateChan:             make(chan webrtc.ICECandidateInit, 100),
+		ArenaDescriptionChan:      make(chan webrtc.SessionDescription, 100),
+		ArenaCandidateChan:        make(chan webrtc.ICECandidateInit, 100),
+		SendDataChan:              make(chan string, 100),
+		ControlsReadyChan:         make(chan bool),
+		AllowControlsChan:         make(chan bool),
+		ID:                        id,
+		Status:                    Idle,
+		ConnectionID:              "",
+		IsReady:                   false,
+	}
+}
