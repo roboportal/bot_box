@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"log"
 
-	"github.com/malykhin/warbots/arena_controller/pkg/botcom"
-	"github.com/malykhin/warbots/arena_controller/pkg/utils"
 	"github.com/pion/mediadevices"
 	"github.com/pion/webrtc/v3"
+	"github.com/roboportal/bot_box/pkg/botcom"
+	"github.com/roboportal/bot_box/pkg/utils"
 )
 
 const (

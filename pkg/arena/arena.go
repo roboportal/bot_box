@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"log"
 
-	"github.com/malykhin/warbots/arena_controller/pkg/bot"
-	"github.com/malykhin/warbots/arena_controller/pkg/utils"
 	"github.com/pion/mediadevices"
 	"github.com/pion/mediadevices/pkg/codec/mmal"
 	"github.com/pion/mediadevices/pkg/codec/opus"
 	"github.com/pion/mediadevices/pkg/frame"
 	"github.com/pion/mediadevices/pkg/prop"
 	"github.com/pion/webrtc/v3"
+	"github.com/roboportal/bot_box/pkg/bot"
+	"github.com/roboportal/bot_box/pkg/utils"
 )
 
 type AnArena struct {

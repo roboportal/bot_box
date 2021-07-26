@@ -1,4 +1,4 @@
-module github.com/malykhin/warbots/arena_controller
+module github.com/roboportal/bot_box
 
 go 1.14
 

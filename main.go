@@ -7,9 +7,9 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/joho/godotenv"
-	"github.com/malykhin/warbots/arena_controller/pkg/arena"
-	"github.com/malykhin/warbots/arena_controller/pkg/communicator"
-	"github.com/malykhin/warbots/arena_controller/pkg/serial"
+	"github.com/roboportal/bot_box/pkg/arena"
+	"github.com/roboportal/bot_box/pkg/communicator"
+	"github.com/roboportal/bot_box/pkg/serial"
 )
 
 func main() {
