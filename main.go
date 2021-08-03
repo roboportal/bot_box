@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	jwt "github.com/dgrijalva/jwt-go"
+	jwt "github.com/golang-jwt/jwt"
 	"github.com/joho/godotenv"
 	"github.com/roboportal/bot_box/pkg/arena"
 	"github.com/roboportal/bot_box/pkg/communicator"
