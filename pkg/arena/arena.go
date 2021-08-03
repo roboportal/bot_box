@@ -7,7 +7,6 @@ import (
 	"github.com/pion/mediadevices"
 	"github.com/pion/mediadevices/pkg/codec/mmal"
 	"github.com/pion/mediadevices/pkg/codec/opus"
-	"github.com/pion/mediadevices/pkg/frame"
 	"github.com/pion/mediadevices/pkg/prop"
 	"github.com/pion/webrtc/v3"
 	"github.com/roboportal/bot_box/pkg/bot"
@@ -133,7 +132,6 @@ func (a *AnArena) Run() {
 
 	mediaStream, err := mediadevices.GetUserMedia(mediadevices.MediaStreamConstraints{
 		Video: func(c *mediadevices.MediaTrackConstraints) {
-			log.Println(frame.FormatRGBA)
 			c.FrameFormat = prop.FrameFormat(a.frameFormat)
 			c.Width = prop.Int(a.videoWidth)
 			c.FrameRate = prop.Float(a.videoFrameRate)
