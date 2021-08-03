@@ -26,6 +26,10 @@ type AnArena struct {
 	botsCount                      int
 	Bots                           []*bot.ABot
 	areControlsAllowedBySupervisor bool
+	mmalBitRate                    int
+	frameFormat                    string
+	videoWidth                     int
+	videoFrameRate                 int
 }
 
 func Factory(
@@ -33,6 +37,12 @@ func Factory(
 	tokenString string,
 	publicKey string,
 	nBots int,
+
+	mmalBitRate int,
+	frameFormat string,
+	videoWidth int,
+	videoFrameRate int,
+
 ) AnArena {
 	return AnArena{
 		WSRead:      make(chan string),
@@ -41,9 +51,15 @@ func Factory(
 		SerialRead:  make(chan string),
 		Disconnect:  make(chan struct{}),
 
-		TokenString:                    tokenString,
-		PublicKey:                      publicKey,
-		stunURLs:                       stunUrls,
+		TokenString: tokenString,
+		PublicKey:   publicKey,
+		stunURLs:    stunUrls,
+
+		mmalBitRate:    mmalBitRate,
+		frameFormat:    frameFormat,
+		videoWidth:     videoWidth,
+		videoFrameRate: videoFrameRate,
+
 		botsCount:                      nBots,
 		Bots:                           make([]*bot.ABot, nBots),
 		areControlsAllowedBySupervisor: true,
@@ -95,7 +111,7 @@ func (a *AnArena) Run() {
 	if err != nil {
 		panic(err)
 	}
-	mmalParams.BitRate = 750_000
+	mmalParams.BitRate = a.mmalBitRate
 
 	opusParams, err := opus.NewParams()
 	if err != nil {
@@ -117,9 +133,10 @@ func (a *AnArena) Run() {
 
 	mediaStream, err := mediadevices.GetUserMedia(mediadevices.MediaStreamConstraints{
 		Video: func(c *mediadevices.MediaTrackConstraints) {
-			c.FrameFormat = prop.FrameFormat(frame.FormatRGBA)
-			c.Width = prop.Int(800)
-			c.FrameRate = prop.Float(30)
+			log.Println(frame.FormatRGBA)
+			c.FrameFormat = prop.FrameFormat(a.frameFormat)
+			c.Width = prop.Int(a.videoWidth)
+			c.FrameRate = prop.Float(a.videoFrameRate)
 
 		},
 		Codec: codecSelector,

@@ -26,12 +26,24 @@ func main() {
 	portName := os.Getenv("port_name")
 	stunUrls := strings.SplitAfter(os.Getenv("stun_urls"), ",")
 	baudRate, err := strconv.ParseInt(os.Getenv("baud_rate"), 10, 32)
-
 	if err != nil {
 		panic(err)
 	}
-
 	nBots, err := strconv.ParseInt(os.Getenv("n_bots"), 10, 32)
+	if err != nil {
+		panic(err)
+	}
+	mmalBitRate, err := strconv.ParseInt(os.Getenv("mmal_bit_rate"), 10, 32)
+	if err != nil {
+		panic(err)
+	}
+	frameFormat := os.Getenv("frame_format")
+
+	videoWidth, err := strconv.ParseInt(os.Getenv("video_width"), 10, 32)
+	if err != nil {
+		panic(err)
+	}
+	videoFrameRate, err := strconv.ParseInt(os.Getenv("video_frame_rate"), 10, 32)
 
 	if err != nil {
 		panic(err)
@@ -47,7 +59,7 @@ func main() {
 		panic(err)
 	}
 
-	_arena := arena.Factory(stunUrls, tokenString, publicKey, int(nBots))
+	_arena := arena.Factory(stunUrls, tokenString, publicKey, int(nBots), int(mmalBitRate), frameFormat, int(videoWidth), int(videoFrameRate))
 
 	go _arena.Run()
 
