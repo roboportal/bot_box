@@ -193,6 +193,10 @@ func (a *AnArena) Run() {
 					continue
 				}
 				a.setAreControlsAllowedBySupervisor(payload.AreControlsAllowed)
+
+				for _, b := range a.Bots {
+					b.NotifyAreControlsAllowedBySupervisorChange(payload.AreControlsAllowed)
+				}
 			}
 
 			if data.ID >= a.botsCount {

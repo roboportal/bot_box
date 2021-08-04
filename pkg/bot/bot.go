@@ -2,6 +2,7 @@ package bot
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/pion/mediadevices"
@@ -42,6 +43,21 @@ func (b *ABot) SetConnecting() {
 
 func (b *ABot) SetConnected() {
 	b.Status = Connected
+}
+
+func (b *ABot) NotifyAreControlsAllowedBySupervisorChange(state bool) {
+	if b.Status != Connected {
+		return
+	}
+
+	status := "DECLINED"
+	if state {
+		status = "ALLOWED"
+	}
+	command := fmt.Sprintf("{\"type\": \"CONTROLS_SUPERVISOR_STATUS_CHANGE\", \"payload\": {\"status\": \"%s\"}}", status)
+	go func() {
+		b.SendDataChan <- command
+	}()
 }
 
 func (b *ABot) Run(
@@ -185,6 +201,17 @@ func (b *ABot) Run(
 
 		case state := <-b.ControlsReadyChan:
 			log.Println("Bot ready:", b.ID, state)
+
+			status := "DECLINED"
+			if state {
+				status = "ALLOWED"
+			}
+			command := fmt.Sprintf("{\"type\": \"CONTROLS_STATUS_CHANGE\", \"payload\": {\"status\": \"%s\"}}", status)
+
+			go func() {
+				b.SendDataChan <- command
+			}()
+
 			b.IsReady = state
 		}
 	}
@@ -194,11 +221,11 @@ func Factory(id int) ABot {
 	return ABot{
 		QuitWebRTCChan:            make(chan struct{}),
 		WebRTCConnectionStateChan: make(chan string),
-		DescriptionChan:           make(chan webrtc.SessionDescription, 100),
-		CandidateChan:             make(chan webrtc.ICECandidateInit, 100),
-		ArenaDescriptionChan:      make(chan webrtc.SessionDescription, 100),
-		ArenaCandidateChan:        make(chan webrtc.ICECandidateInit, 100),
-		SendDataChan:              make(chan string, 100),
+		DescriptionChan:           make(chan webrtc.SessionDescription),
+		CandidateChan:             make(chan webrtc.ICECandidateInit),
+		ArenaDescriptionChan:      make(chan webrtc.SessionDescription),
+		ArenaCandidateChan:        make(chan webrtc.ICECandidateInit),
+		SendDataChan:              make(chan string),
 		ControlsReadyChan:         make(chan bool),
 		AllowControlsChan:         make(chan bool),
 		ID:                        id,

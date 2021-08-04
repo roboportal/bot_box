@@ -94,6 +94,7 @@ func Init(
 				return
 			}
 
+			defer dataChannel.Close()
 			// Register channel opening handling
 			dataChannel.OnOpen(func() {
 				log.Println("Data channel open:", dataChannel.Label(), dataChannel.ID())
@@ -112,11 +113,18 @@ func Init(
 					log.Println("Data channel open:", d.Label(), d.ID())
 
 					for {
-						msg := <-sendDataChan
-						err := d.SendText(msg)
-						if err != nil {
-							log.Println(err)
+						select {
+						case msg := <-sendDataChan:
+							err := d.SendText(msg)
+							if err != nil {
+								log.Println(err)
+							}
+
+						case <-quitWebRTCChan:
+							d.Close()
+							return
 						}
+
 					}
 				})
 
@@ -241,7 +249,6 @@ func Init(
 			if peerConnection != nil {
 				peerConnection.Close()
 			}
-
 			go Init(
 				id,
 				stunUrls,
