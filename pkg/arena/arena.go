@@ -96,6 +96,7 @@ func (a *AnArena) allowControls() {
 func (a *AnArena) disconnectAllBots() {
 	for _, b := range a.Bots {
 		go func(b *bot.ABot) {
+			b.SendDataChan <- "{\"type\": \"DISCONNECTED_BY_ADMIN\"}"
 			b.QuitWebRTCChan <- struct{}{}
 		}(b)
 	}
