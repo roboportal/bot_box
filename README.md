@@ -6,14 +6,65 @@ It enables peer-to-peer controls and video streaming between robots and web-base
 # Features
 
 - real time video streaming
-- controls setup for keyboard and gamepad
-- access control
-- admin features
+- keyboard and gamepad controls streaming with data channel
 
 # How it works
 
 ![System diagram](./doc/system_diagram.png)
 
-## Contacts:
+# Installation guide
+
+1. Prepare SD card with Raspberry Pi OS image. [How To guide for Raspberry Pi Imager.](https://www.youtube.com/watch?v=ntaXWS8Lk34) We don't need Desktop version for this application.
+2. Enable camera, SSH (optional, but handy) and set up the WiFi with `raspi-config`. It also make sense to change the default password and set up the auto login. [ Documentation for raspi-config.](https://www.raspberrypi.org/documentation/configuration/raspi-config.md)
+3. Install git and wget (staring from this step you'll need an internet connection)
+  ```
+  sudo apt update
+  sudo apt install git wget
+  ```
+4. Install golang
+  ```
+  wget https://dl.google.com/go/go1.14.4.linux-armv6l.tar.gz
+  sudo tar -C /usr/local -xzf go1.14.4.linux-armv6l.tar.gz
+  rm go1.14.4.linux-arm64.tar.gz
+  ```
+  
+5. And configure it:
+    - Open .profile `nano ~/.profile`
+    - And insert this:
+    ```
+    PATH=$PATH:/usr/local/go/bin
+    GOPATH=$HOME/go
+    ```
+    - save your changes and exit nano: `Ctrl + O` and `Ctrl + X`
+    - apply your changes: `source ~/.profile`
+    - check the installation: `go version`
+   
+6. Clone this repository to your Raspberry:
+   `git clone git@github.com:roboportal/bot_box.git`
+
+7. Navigate to the repo: `cd ./bot_box`
+8. And compile the BotBox: `go build`
+9. Create `.env` file for the configuration [following the instructions](#botbox-configuration).
+10. Run the bot by executing: `./bot_box`
+
+# BotBox configuration
+
+All the configuration of Box Bot is done by setting up `.env` file. You can use `.env_example` as a staring point for your config.
+The list of params:
+- `srv_url` - the WSS endpoint of roboportal.io
+- `public_key` and `secret_key` - the key pair obtained after the bot creation
+- `stun_urls` - comma-separated list of STUN servers URLs 
+- `mmal_bit_rate` - bit rate for MMAL codec
+- `frame_format` - camera image format
+- `video_width` - camera image width
+- `video_frame_rate` - camera frame rate
+
+- `port_name` - name of the serial port to communicate with robot hardware
+- `baud_rate` - serial port baud rate
+
+- `n_bots` - number of bots controlled by one Bot Box.
+
+
+# Contacts:
 
 [Join our Discord channel](https://discord.gg/WeAahmwMMv) or reach out over email: info@roboportal.io
