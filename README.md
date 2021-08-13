@@ -64,6 +64,28 @@ The list of params:
 
 - `n_bots` - number of bots controlled by one Bot Box.
 
+# Supervisor setup
+
+Let's setup supervisor. It will start Bot Box process after Raspberry Pi boot and handle restarts after possible application crashes.
+
+1. Install the supervisor: `sudo apt-get install supervisor`
+2. The next step is to setup `supervisorctl` for `pi` user: `sudo nano /etc/supervisor/supervisord.conf` 
+3. Under the section `[unix_http_server]` modify and create this:
+  ```
+  chmod=0770
+  chown=root:pi
+  ```
+4. Create the config file for Bot Box: `sudo nano /etc/supervisor/conf.d/bot-box.conf`
+5. Add there the following:
+  ```
+  [program:bot-box]
+  command=/home/pi/bot_box/bot_box
+  directory=/home/pi/bot_box
+  autostart=true
+  autorestart=true
+  user=pi
+  ```
+6. To start the bot box run `supervisorctl start bot-box`. There are some handy commands: `supervisorctl stop bot-box`, `supervisorctl restart bot-box`, `supervisorctl tail bot-box stdout`.
 
 # Contacts:
 
