@@ -168,10 +168,9 @@ func (a *AnArena) Run() {
 		select {
 		case msg := <-a.WSRead:
 			type aData struct {
-				Action       string
-				ConnectionID string
-				Data         string
-				ID           int
+				Action string
+				Data   string
+				ID     int
 			}
 			var data aData
 			err := json.Unmarshal([]byte(msg), &data)
@@ -212,7 +211,6 @@ func (a *AnArena) Run() {
 					continue
 				}
 				b.SetConnecting()
-				b.ConnectionID = data.ConnectionID
 				log.Println("Set description for bot: ", b.ID)
 				var d webrtc.SessionDescription
 				err := json.Unmarshal([]byte(data.Data), &d)
@@ -229,10 +227,6 @@ func (a *AnArena) Run() {
 					log.Println("Bot is not connecting when set candidate:", b.ID)
 					continue
 				}
-				if b.ConnectionID != data.ConnectionID {
-					log.Println("Ignoring connection wrong connection id:", b.ID)
-					continue
-				}
 
 				log.Println("Set candidate for bot:", b.ID, b.Status)
 				var d webrtc.ICECandidateInit
@@ -246,10 +240,6 @@ func (a *AnArena) Run() {
 			}
 
 			if data.Action == "DISCONNECT_BOT" {
-				if b.ConnectionID != data.ConnectionID {
-					log.Println("Ignoring connection wrong connection id:", b.ID, b.ConnectionID, data.ConnectionID)
-					continue
-				}
 				log.Println("Disconnect bot: ", b.ID)
 				go utils.TriggerChannel(b.QuitWebRTCChan)
 				continue

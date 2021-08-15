@@ -29,7 +29,6 @@ type ABot struct {
 	AllowControlsChan         chan bool
 	ID                        int
 	Status                    string
-	ConnectionID              string
 	IsReady                   bool
 }
 
@@ -195,7 +194,6 @@ func (b *ABot) Run(
 				state == webrtc.ICEConnectionStateDisconnected.String() ||
 				state == webrtc.ICEConnectionStateClosed.String() {
 				b.SetIdle()
-				b.ConnectionID = ""
 				go utils.TriggerChannel(b.QuitWebRTCChan)
 			}
 
@@ -230,7 +228,6 @@ func Factory(id int) ABot {
 		AllowControlsChan:         make(chan bool),
 		ID:                        id,
 		Status:                    Idle,
-		ConnectionID:              "",
 		IsReady:                   false,
 	}
 }
