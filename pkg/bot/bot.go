@@ -189,12 +189,75 @@ func (b *ABot) Run(
 		case state := <-b.WebRTCConnectionStateChan:
 			if state == webrtc.ICEConnectionStateConnected.String() {
 				b.SetConnected()
+
+				type BotConnectedPayload struct {
+					Token     string `json:"token"`
+					PublicKey string `json:"publicKey"`
+					ID        int    `json:"id"`
+				}
+
+				type BotConnectedAction struct {
+					Name    string              `json:"name"`
+					Payload BotConnectedPayload `json:"payload"`
+				}
+
+				log.Println("Creating connection for bot: ", b.ID)
+				message := BotConnectedAction{
+					Name: "BOT_CONNECTED",
+					Payload: BotConnectedPayload{
+						Token:     tokenString,
+						PublicKey: publicKey,
+						ID:        b.ID,
+					},
+				}
+
+				command, err := json.Marshal(message)
+
+				if err != nil {
+					log.Println(err)
+					return
+				}
+
+				wsWrite <- string(command)
+
 			}
 			if state == webrtc.ICEConnectionStateFailed.String() ||
 				state == webrtc.ICEConnectionStateDisconnected.String() ||
 				state == webrtc.ICEConnectionStateClosed.String() {
 				b.SetIdle()
+
+				type UnblockDisconnectedPayload struct {
+					Token     string `json:"token"`
+					PublicKey string `json:"publicKey"`
+					ID        int    `json:"id"`
+				}
+
+				type UnblockDisconnectedAction struct {
+					Name    string                     `json:"name"`
+					Payload UnblockDisconnectedPayload `json:"payload"`
+				}
+
+				log.Println("Creating connection for bot: ", b.ID)
+				message := UnblockDisconnectedAction{
+					Name: "UNBLOCK_DISCONNECTED",
+					Payload: UnblockDisconnectedPayload{
+						Token:     tokenString,
+						PublicKey: publicKey,
+						ID:        b.ID,
+					},
+				}
+
+				command, err := json.Marshal(message)
+
+				if err != nil {
+					log.Println(err)
+					return
+				}
+
+				wsWrite <- string(command)
+
 				go utils.TriggerChannel(b.QuitWebRTCChan)
+
 			}
 
 		case state := <-b.ControlsReadyChan:
