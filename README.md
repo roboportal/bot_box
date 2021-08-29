@@ -25,7 +25,7 @@ It enables peer-to-peer controls and video streaming between robots and web-base
   ```
   wget https://dl.google.com/go/go1.14.4.linux-armv6l.tar.gz
   sudo tar -C /usr/local -xzf go1.14.4.linux-armv6l.tar.gz
-  rm go1.14.4.linux-arm64.tar.gz
+  rm go1.14.4.linux-armv6l.tar.gz
   ```
   
 5. And configure it:
