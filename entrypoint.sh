@@ -6,8 +6,6 @@ function check_connection() {
   curl -LI $health_check_url -o /dev/null -w '%{http_code}\n' -s
 }
 
-ps -ef | grep 'bot_box'| grep -v grep | awk '{print $2}' | xargs -r kill -9
-
 if [ $(check_connection) == '200' ]
   then 
     echo Connected to the internet. Starting.
