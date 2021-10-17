@@ -79,11 +79,13 @@ Let's setup supervisor. It will start Bot Box process after Raspberry Pi boot an
 5. Add there the following:
   ```
   [program:bot-box]
-  command=/home/pi/bot_box/bot_box
+  command=/home/pi/bot_box/entrypoint.sh
   directory=/home/pi/bot_box
   autostart=true
   autorestart=true
   user=pi
+  killasgroup=true
+  stopasgroup=true
   ```
 6. To start the bot box run `supervisorctl start bot-box`. There are some handy commands: `supervisorctl stop bot-box`, `supervisorctl restart bot-box`, `supervisorctl tail bot-box stdout`.
 
