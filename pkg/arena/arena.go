@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-
+	"strings"
 	"github.com/pion/mediadevices"
 	"github.com/pion/mediadevices/pkg/codec/mmal"
 	"github.com/pion/mediadevices/pkg/codec/opus"
@@ -247,23 +247,28 @@ func (a *AnArena) Run() {
 			}
 
 		case serialMsg := <-a.SerialRead:
+			r := strings.NewReplacer(" ", "", "\t", "", "\n", "", "\r", "", "\x00", "")
+			sanitizedMsg := r.Replace(serialMsg)
+
 			type TelemetryMessage struct {
 				ID int `json:"id"`
 			}
 
 			var t TelemetryMessage
 
-			err := json.Unmarshal([]byte(serialMsg), &t)
+			
+			err := json.Unmarshal([]byte(sanitizedMsg), &t)
 
 			if err != nil {
 				log.Println(err)
 				continue
 			}
 
-			telemetry := fmt.Sprintf("{\"type\": \"TELEMETRY\", \"payload\": \"%s\"}", serialMsg)
-
-			a.Bots[t.ID].SendDataChan <- telemetry
-			log.Println(serialMsg)
+			if(a.Bots[t.ID].Status == bot.Connected) {
+				telemetry := fmt.Sprintf("{\"type\": \"TELEMETRY\", \"payload\": %s}", sanitizedMsg)
+			
+				a.Bots[t.ID].SendDataChan <- telemetry
+			}
 		}
 	}
 }
