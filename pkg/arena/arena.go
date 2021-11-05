@@ -2,6 +2,7 @@ package arena
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/pion/mediadevices"
@@ -246,6 +247,22 @@ func (a *AnArena) Run() {
 			}
 
 		case serialMsg := <-a.SerialRead:
+			type TelemetryMessage struct {
+				ID int `json:"id"`
+			}
+
+			var t TelemetryMessage
+
+			err := json.Unmarshal([]byte(serialMsg), &t)
+
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+
+			telemetry := fmt.Sprintf("{\"type\": \"TELEMETRY\", \"payload\": \"%s\"}", serialMsg)
+
+			a.Bots[t.ID].SendDataChan <- telemetry
 			log.Println(serialMsg)
 		}
 	}
