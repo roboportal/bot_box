@@ -266,8 +266,9 @@ func (a *AnArena) Run() {
 
 			if(a.Bots[t.ID].Status == bot.Connected) {
 				telemetry := fmt.Sprintf("{\"type\": \"TELEMETRY\", \"payload\": %s}", sanitizedMsg)
-			
-				a.Bots[t.ID].SendDataChan <- telemetry
+				go func() {
+					a.Bots[t.ID].SendDataChan <- telemetry
+				}()				
 			}
 		}
 	}
