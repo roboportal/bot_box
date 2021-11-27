@@ -26,7 +26,6 @@ type ABot struct {
 	ArenaCandidateChan        chan webrtc.ICECandidateInit
 	SendDataChan              chan string
 	ControlsReadyChan         chan bool
-	AllowControlsChan         chan bool
 	ID                        int
 	Status                    string
 	IsReady                   bool
@@ -69,6 +68,8 @@ func (b *ABot) Run(
 	serialWrite chan string,
 	serialRead chan string,
 	areControlsAllowedBySupervisor *bool,
+	areBotsReady *bool,
+	setBotReady func(int),
 ) {
 
 	type CreateConnectionPayload struct {
@@ -116,7 +117,7 @@ func (b *ABot) Run(
 		serialWrite,
 		b.ControlsReadyChan,
 		areControlsAllowedBySupervisor,
-		&b.IsReady,
+		areBotsReady,
 	)
 
 	for {
@@ -273,7 +274,9 @@ func (b *ABot) Run(
 				b.SendDataChan <- command
 			}()
 
-			b.IsReady = state
+			if state {
+				setBotReady(b.ID)
+			}
 		}
 	}
 }
@@ -288,7 +291,6 @@ func Factory(id int) ABot {
 		ArenaCandidateChan:        make(chan webrtc.ICECandidateInit),
 		SendDataChan:              make(chan string),
 		ControlsReadyChan:         make(chan bool),
-		AllowControlsChan:         make(chan bool),
 		ID:                        id,
 		Status:                    Idle,
 		IsReady:                   false,

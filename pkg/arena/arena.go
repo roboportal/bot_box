@@ -30,6 +30,7 @@ type AnArena struct {
 	frameFormat                    string
 	videoWidth                     int
 	videoFrameRate                 int
+	areBotsReady                   bool
 }
 
 func Factory(
@@ -63,6 +64,7 @@ func Factory(
 		botsCount:                      nBots,
 		Bots:                           make([]*bot.ABot, nBots),
 		areControlsAllowedBySupervisor: true,
+		areBotsReady:                   false,
 	}
 }
 
@@ -73,7 +75,7 @@ func (a *AnArena) SetBot(id int, b *bot.ABot) {
 func (a *AnArena) SetBotReady(id int) {
 	a.Bots[id].IsReady = true
 	if a.AreBotsReady() {
-		a.allowControls()
+		a.areBotsReady = true
 	}
 }
 
@@ -84,14 +86,6 @@ func (a *AnArena) AreBotsReady() bool {
 		}
 	}
 	return true
-}
-
-func (a *AnArena) allowControls() {
-	for _, b := range a.Bots {
-		go func(b *bot.ABot) {
-			b.AllowControlsChan <- true
-		}(b)
-	}
 }
 
 func (a *AnArena) disconnectAllBots() {
@@ -146,6 +140,8 @@ func (a *AnArena) Run() {
 			a.SerialWrite,
 			a.SerialRead,
 			&a.areControlsAllowedBySupervisor,
+			&a.areBotsReady,
+			a.SetBotReady,
 		)
 	}
 

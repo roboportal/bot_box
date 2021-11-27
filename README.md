@@ -46,7 +46,7 @@ rm go1.16.5.linux-armv6l.tar.gz
    `git clone git@github.com:roboportal/bot_box.git`
 
 7. Navigate to the repo: `cd ./bot_box`
-8. And compile the BotBox: `go build`
+8. And compile the BotBox: `go build -tags=arm` for raspberry or `go build` for mac.
 9. Create `.env` file for the configuration [following the instructions](#botbox-configuration).
 10. Run the bot by executing: `./bot_box`
 

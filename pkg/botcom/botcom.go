@@ -30,7 +30,7 @@ func Init(
 	serialWrite chan string,
 	controlsReady chan bool,
 	areControlsAllowedBySupervisor *bool,
-	isReady *bool,
+	areBotsReady *bool,
 ) {
 
 	config := webrtc.Configuration{
@@ -154,7 +154,8 @@ func Init(
 							log.Println("Controls blocked by supervisor")
 							break
 						}
-						if !*isReady {
+
+						if !*areBotsReady {
 							log.Println("Controls are not allowed yet:", id)
 							break
 						}
@@ -264,7 +265,7 @@ func Init(
 				serialWrite,
 				controlsReady,
 				areControlsAllowedBySupervisor,
-				isReady,
+				areBotsReady,
 			)
 			return
 		}
