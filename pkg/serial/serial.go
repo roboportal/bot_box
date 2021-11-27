@@ -1,8 +1,9 @@
 package serial
 
 import (
+	"bufio"
 	"log"
-  "bufio"
+
 	"github.com/tarm/serial"
 )
 
@@ -39,11 +40,11 @@ func Init(
 		scanner := bufio.NewScanner(s)
 
 		for scanner.Scan() {
-				data := scanner.Text()
-				
-				go func(data string) {
-					read <- data
-				}(data)
+			data := scanner.Text()
+
+			go func(data string) {
+				read <- data
+			}(data)
 		}
 	}()
 }

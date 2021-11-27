@@ -46,7 +46,7 @@ rm go1.16.5.linux-armv6l.tar.gz
    `git clone git@github.com:roboportal/bot_box.git`
 
 7. Navigate to the repo: `cd ./bot_box`
-8. And compile the BotBox: `go build`
+8. And compile the BotBox: `go build -tags=arm` for raspberry or `go build` for mac.
 9. Create `.env` file for the configuration [following the instructions](#botbox-configuration).
 10. Run the bot by executing: `./bot_box`
 
@@ -58,7 +58,7 @@ The list of params:
 - `srv_url` - the WSS endpoint of roboportal.io
 - `public_key` and `secret_key` - the key pair obtained after the bot creation
 - `stun_urls` - comma-separated list of STUN servers URLs
-- `mmal_bit_rate` - bit rate for MMAL codec
+- `video_codec_bit_rate` - bit rate for video codec
 - `frame_format` - camera image format
 - `video_width` - camera image width
 - `video_frame_rate` - camera frame rate

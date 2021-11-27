@@ -33,7 +33,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	mmalBitRate, err := strconv.ParseInt(os.Getenv("mmal_bit_rate"), 10, 32)
+	videoCodecBitRate, err := strconv.ParseInt(os.Getenv("video_codec_bit_rate"), 10, 32)
 	if err != nil {
 		panic(err)
 	}
@@ -59,7 +59,7 @@ func main() {
 		panic(err)
 	}
 
-	_arena := arena.Factory(stunUrls, tokenString, publicKey, int(nBots), int(mmalBitRate), frameFormat, int(videoWidth), int(videoFrameRate))
+	_arena := arena.Factory(stunUrls, tokenString, publicKey, int(nBots), int(videoCodecBitRate), frameFormat, int(videoWidth), int(videoFrameRate))
 
 	go _arena.Run()
 
