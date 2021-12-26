@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log"
 	"strings"
+
 	"github.com/pion/mediadevices"
-	"github.com/pion/mediadevices/pkg/codec/mmal"
-	"github.com/pion/mediadevices/pkg/codec/opus"
+
 	"github.com/pion/mediadevices/pkg/prop"
 	"github.com/pion/webrtc/v3"
 	"github.com/roboportal/bot_box/pkg/bot"
@@ -26,10 +26,11 @@ type AnArena struct {
 	botsCount                      int
 	Bots                           []*bot.ABot
 	areControlsAllowedBySupervisor bool
-	mmalBitRate                    int
+	videoCodecBitRate              int
 	frameFormat                    string
 	videoWidth                     int
 	videoFrameRate                 int
+	areBotsReady                   bool
 }
 
 func Factory(
@@ -38,7 +39,7 @@ func Factory(
 	publicKey string,
 	nBots int,
 
-	mmalBitRate int,
+	videoCodecBitRate int,
 	frameFormat string,
 	videoWidth int,
 	videoFrameRate int,
@@ -55,14 +56,15 @@ func Factory(
 		PublicKey:   publicKey,
 		stunURLs:    stunUrls,
 
-		mmalBitRate:    mmalBitRate,
-		frameFormat:    frameFormat,
-		videoWidth:     videoWidth,
-		videoFrameRate: videoFrameRate,
+		videoCodecBitRate: videoCodecBitRate,
+		frameFormat:       frameFormat,
+		videoWidth:        videoWidth,
+		videoFrameRate:    videoFrameRate,
 
 		botsCount:                      nBots,
 		Bots:                           make([]*bot.ABot, nBots),
 		areControlsAllowedBySupervisor: true,
+		areBotsReady:                   false,
 	}
 }
 
@@ -73,7 +75,7 @@ func (a *AnArena) SetBot(id int, b *bot.ABot) {
 func (a *AnArena) SetBotReady(id int) {
 	a.Bots[id].IsReady = true
 	if a.AreBotsReady() {
-		a.allowControls()
+		a.areBotsReady = true
 	}
 }
 
@@ -84,14 +86,6 @@ func (a *AnArena) AreBotsReady() bool {
 		}
 	}
 	return true
-}
-
-func (a *AnArena) allowControls() {
-	for _, b := range a.Bots {
-		go func(b *bot.ABot) {
-			b.AllowControlsChan <- true
-		}(b)
-	}
 }
 
 func (a *AnArena) disconnectAllBots() {
@@ -108,29 +102,13 @@ func (a *AnArena) setAreControlsAllowedBySupervisor(state bool) {
 }
 
 func (a *AnArena) Run() {
-	mmalParams, err := mmal.NewParams()
-	if err != nil {
-		panic(err)
-	}
-	mmalParams.BitRate = a.mmalBitRate
 
-	opusParams, err := opus.NewParams()
-	if err != nil {
-		panic(err)
-	}
-	codecSelector := mediadevices.NewCodecSelector(
-		mediadevices.WithVideoEncoders(&mmalParams),
-		mediadevices.WithAudioEncoders(&opusParams),
-	)
+	codecSelector := getCodecSelector(a.videoCodecBitRate)
 
 	mediaEngine := webrtc.MediaEngine{}
 	codecSelector.Populate(&mediaEngine)
 
 	settingEngine := webrtc.SettingEngine{}
-
-	if err != nil {
-		panic(err)
-	}
 
 	mediaStream, err := mediadevices.GetUserMedia(mediadevices.MediaStreamConstraints{
 		Video: func(c *mediadevices.MediaTrackConstraints) {
@@ -162,6 +140,8 @@ func (a *AnArena) Run() {
 			a.SerialWrite,
 			a.SerialRead,
 			&a.areControlsAllowedBySupervisor,
+			&a.areBotsReady,
+			a.SetBotReady,
 		)
 	}
 
@@ -256,7 +236,6 @@ func (a *AnArena) Run() {
 
 			var t TelemetryMessage
 
-			
 			err := json.Unmarshal([]byte(sanitizedMsg), &t)
 
 			if err != nil {
@@ -264,11 +243,11 @@ func (a *AnArena) Run() {
 				continue
 			}
 
-			if(a.Bots[t.ID].Status == bot.Connected) {
+			if a.Bots[t.ID].Status == bot.Connected {
 				telemetry := fmt.Sprintf("{\"type\": \"TELEMETRY\", \"payload\": %s}", sanitizedMsg)
 				go func() {
 					a.Bots[t.ID].SendDataChan <- telemetry
-				}()				
+				}()
 			}
 		}
 	}

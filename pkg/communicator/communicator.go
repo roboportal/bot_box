@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/roboportal/bot_box/pkg/utils"
 )
 
 const (
@@ -82,6 +83,7 @@ func (comm *ACommunicator) isConnecting() bool {
 func (comm *ACommunicator) handleConnection() {
 
 	headers := http.Header{"x-public-key": {comm.publicKey}}
+	tickerP := time.NewTicker(time.Duration(comm.pingIntervalSec) * time.Second)
 
 	for {
 		select {
@@ -102,11 +104,17 @@ func (comm *ACommunicator) handleConnection() {
 
 				time.Sleep(time.Duration(comm.reconnectTimeoutSec) * time.Second)
 
-				comm.doReconnect <- struct{}{}
+				go utils.TriggerChannel(comm.doReconnect)
+
 				comm.setDisconected()
 				comm.mu.Unlock()
 				continue
 			}
+
+			// c.SetPongHandler(func(msg string) error {
+			// 	log.Println("Pong", msg)
+			// 	return nil
+			// })
 
 			c.SetWriteDeadline(time.Now().Add(time.Duration(comm.sendTimeoutSec) * time.Second))
 			comm.conn = c
@@ -117,10 +125,29 @@ func (comm *ACommunicator) handleConnection() {
 
 			log.Println("Connected to the platform.")
 
+		case <-tickerP.C:
+			if !comm.isConnected() {
+				continue
+			}
+
+			c := comm.conn
+
+			err := c.WriteControl(websocket.PingMessage, []byte(comm.publicKey), time.Now().Add(time.Duration(comm.sendTimeoutSec)*time.Second))
+
+			if err != nil {
+				log.Println("WS Ping error:", err)
+
+				// if !comm.isConnecting() {
+				// 	go utils.TriggerChannel(comm.doReconnect)
+				// }
+
+				continue
+			}
+
 		case <-comm.shutdownChan:
 			c := comm.conn
 
-			err := c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+			err := c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""), time.Now().Add(time.Duration(comm.sendTimeoutSec)*time.Second))
 
 			if err != nil {
 				log.Println("WS Close error:", err)
@@ -137,11 +164,11 @@ func (comm *ACommunicator) handleConnection() {
 }
 
 func (comm *ACommunicator) handleSend() {
-	tickerP := time.NewTicker(time.Duration(comm.pingIntervalSec) * time.Second)
 
 	for {
 		select {
 		case msg := <-comm.sendChan:
+			log.Println("message", msg, comm.isConnected())
 			if !comm.isConnected() {
 				continue
 			}
@@ -152,30 +179,6 @@ func (comm *ACommunicator) handleSend() {
 
 			if err != nil {
 				log.Println("Send WS data error:", err)
-
-				if !comm.isConnecting() {
-					comm.doReconnect <- struct{}{}
-				}
-
-				continue
-			}
-
-		case <-tickerP.C:
-			if !comm.isConnected() {
-				continue
-			}
-
-			c := comm.conn
-
-			err := c.WriteMessage(websocket.PingMessage, []byte(comm.publicKey))
-
-			if err != nil {
-				log.Println("WS Ping error:", err)
-
-				if !comm.isConnecting() {
-					comm.doReconnect <- struct{}{}
-				}
-
 				continue
 			}
 
@@ -202,9 +205,9 @@ func (comm *ACommunicator) handleReceive() {
 			_, message, err := comm.conn.ReadMessage()
 			if err != nil {
 				log.Println("WS receiving error", err)
-				comm.doReconnect <- struct{}{}
 				continue
 			}
+			log.Println("msg rec", string(message))
 			if message != nil {
 				comm.receiveChan <- string(message)
 			}
@@ -218,6 +221,7 @@ func Init(p InitParams) {
 	comm := commFactory(p)
 
 	go comm.handleConnection()
+	go utils.TriggerChannel(comm.doReconnect)
 	go comm.handleSend()
 	go comm.handleReceive()
 }
