@@ -1,49 +1,77 @@
 package serial
 
 import (
+	"bufio"
 	"log"
-  "bufio"
+
 	"github.com/tarm/serial"
 )
 
-// Init setups
-func Init(
-	portName string,
-	baudrate int,
-	write chan string,
-	read chan string,
-	reconnectTimeoutSec int,
-) {
-	done := make(chan struct{})
+type InitParams struct {
+	PortName     string
+	BaudRate     int
+	SendChan     chan string
+	ReceiveChan  chan string
+	ShutdownChan chan struct{}
+}
 
-	c := &serial.Config{Name: portName, Baud: baudrate}
+type ASerial struct {
+	serial       *serial.Port
+	sendChan     chan string
+	receiveChan  chan string
+	shutdownChan chan struct{}
+}
+
+func serialFactory(p InitParams) ASerial {
+	c := &serial.Config{Name: p.PortName, Baud: p.BaudRate}
 	s, err := serial.OpenPort(c)
 
-	go func() {
-		defer s.Close()
-		for {
-			select {
-			case <-done:
+	if err != nil {
+		log.Println("Failed to open serial port: ", err)
+		panic(err)
+	}
+
+	return ASerial{
+		serial:       s,
+		sendChan:     p.SendChan,
+		receiveChan:  p.ReceiveChan,
+		shutdownChan: p.ShutdownChan,
+	}
+}
+
+func (s *ASerial) handleSend() {
+	for {
+		select {
+		case <-s.shutdownChan:
+			s.serial.Close()
+			return
+		case msg := <-s.sendChan:
+			_, err := s.serial.Write([]byte(msg + "\n"))
+			if err != nil {
+				log.Println("Serual write error:", err)
+				s.shutdownChan <- struct{}{}
 				return
-			case msg := <-write:
-				_, err = s.Write([]byte(msg + "\n"))
-				if err != nil {
-					log.Println(err)
-					return
-				}
 			}
 		}
-	}()
+	}
+}
 
-	go func() {
-		scanner := bufio.NewScanner(s)
+func (s *ASerial) handleReceive() {
+	scanner := bufio.NewScanner(s.serial)
 
-		for scanner.Scan() {
-				data := scanner.Text()
-				
-				go func(data string) {
-					read <- data
-				}(data)
-		}
-	}()
+	for scanner.Scan() {
+		data := scanner.Text()
+
+		go func(data string) {
+			s.receiveChan <- data
+		}(data)
+	}
+}
+
+// Init setups
+func Init(p InitParams) {
+	s := serialFactory(p)
+
+	go s.handleReceive()
+	go s.handleSend()
 }

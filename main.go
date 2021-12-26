@@ -63,8 +63,30 @@ func main() {
 
 	go _arena.Run()
 
-	go serial.Init(portName, int(baudRate), _arena.SerialWrite, _arena.SerialRead, 1)
-	go communicator.Init(srvURL, _arena.WSRead, _arena.WSWrite, _arena.Disconnect, 1, 1, 1, tokenString, publicKey)
+	shutdownChan := make(chan struct{})
+
+	serialParams := serial.InitParams{
+		PortName:     portName,
+		BaudRate:     int(baudRate),
+		SendChan:     _arena.SerialWrite,
+		ReceiveChan:  _arena.SerialRead,
+		ShutdownChan: shutdownChan,
+	}
+
+	go serial.Init(serialParams)
+
+	communicatorParams := communicator.InitParams{
+		PlatformUri:         srvURL,
+		ReceiveChan:         _arena.WSRead,
+		SendChan:            _arena.WSWrite,
+		ReconnectTimeoutSec: 1,
+		PingIntervalSec:     1,
+		SendTimeoutSec:      1,
+		TokenString:         tokenString,
+		PublicKey:           publicKey,
+		ShutdownChan:        shutdownChan,
+	}
+	go communicator.Init(communicatorParams)
 
 	select {}
 }
