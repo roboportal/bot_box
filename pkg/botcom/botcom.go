@@ -14,29 +14,30 @@ import (
 	_ "github.com/pion/mediadevices/pkg/driver/microphone"
 )
 
-// Init running the WebRTC runtime
-func Init(
-	id int,
-	stunUrls []string,
-	api *webrtc.API,
-	mediaStream mediadevices.MediaStream,
-	descriptionChan chan webrtc.SessionDescription,
-	candidateChan chan webrtc.ICECandidateInit,
-	arenaDescriptionChan chan webrtc.SessionDescription,
-	arenaCandidateChan chan webrtc.ICECandidateInit,
-	webRTCConnectionStateChan chan string,
-	sendDataChan chan string,
-	quitWebRTCChan chan struct{},
-	serialWrite chan string,
-	controlsReady chan bool,
-	areControlsAllowedBySupervisor *bool,
-	areBotsReady *bool,
-) {
+type InitParams struct {
+	Id                                int
+	StunUrls                          []string
+	Api                               *webrtc.API
+	MediaStream                       mediadevices.MediaStream
+	DescriptionChan                   chan webrtc.SessionDescription
+	CandidateChan                     chan webrtc.ICECandidateInit
+	ArenaDescriptionChan              chan webrtc.SessionDescription
+	ArenaCandidateChan                chan webrtc.ICECandidateInit
+	WebRTCConnectionStateChan         chan string
+	SendDataChan                      chan string
+	QuitWebRTCChan                    chan struct{}
+	SerialWriteChan                   chan string
+	ControlsReadyChan                 chan bool
+	GetAreControlsAllowedBySupervisor func() bool
+	GetAreBotsReady                   func() bool
+}
+
+func Init(p InitParams) {
 
 	config := webrtc.Configuration{
 		ICEServers: []webrtc.ICEServer{
 			{
-				URLs: stunUrls,
+				URLs: p.StunUrls,
 			},
 		},
 	}
@@ -49,10 +50,10 @@ func Init(
 	for {
 		select {
 
-		case description := <-descriptionChan:
+		case description := <-p.DescriptionChan:
 			var err error
 
-			peerConnection, err = api.NewPeerConnection(config)
+			peerConnection, err = p.Api.NewPeerConnection(config)
 
 			if err != nil {
 				log.Println(err)
@@ -61,10 +62,10 @@ func Init(
 			}
 			defer peerConnection.Close()
 
-			controlsReady <- false
+			p.ControlsReadyChan <- false
 
 			peerConnection.OnICECandidate(func(c *webrtc.ICECandidate) {
-				log.Println("OnICECandidate bot:", id, c)
+				log.Println("OnICECandidate bot:", p.Id, c)
 				if c == nil {
 					return
 				}
@@ -77,14 +78,14 @@ func Init(
 					pendingCandidates = append(pendingCandidates, c)
 				} else {
 					candidate := c.ToJSON()
-					arenaCandidateChan <- candidate
+					p.ArenaCandidateChan <- candidate
 				}
 			})
 
 			peerConnection.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
 				connectionStateString := connectionState.String()
-				log.Println("ICE Connection State has changed:", id, connectionStateString)
-				webRTCConnectionStateChan <- connectionStateString
+				log.Println("ICE Connection State has changed:", p.Id, connectionStateString)
+				p.WebRTCConnectionStateChan <- connectionStateString
 			})
 
 			dataChannel, err := peerConnection.CreateDataChannel("controls", nil)
@@ -114,13 +115,13 @@ func Init(
 
 					for {
 						select {
-						case msg := <-sendDataChan:
+						case msg := <-p.SendDataChan:
 							err := d.SendText(msg)
 							if err != nil {
 								log.Println(err)
 							}
 
-						case <-quitWebRTCChan:
+						case <-p.QuitWebRTCChan:
 							d.Close()
 							return
 						}
@@ -150,13 +151,13 @@ func Init(
 					switch data.Type {
 					case "CONTROLS":
 
-						if !*areControlsAllowedBySupervisor {
+						if !p.GetAreControlsAllowedBySupervisor() {
 							log.Println("Controls blocked by supervisor")
 							break
 						}
 
-						if !*areBotsReady {
-							log.Println("Controls are not allowed yet:", id)
+						if !p.GetAreBotsReady() {
+							log.Println("Controls are not allowed yet:", p.Id)
 							break
 						}
 
@@ -173,18 +174,18 @@ func Init(
 							return
 						}
 
-						command := fmt.Sprintf("{\"address\":%d,\"controls\":%s}", id, data.Payload)
+						command := fmt.Sprintf("{\"address\":%d,\"controls\":%s}", p.Id, data.Payload)
 
-						serialWrite <- command
+						p.SerialWriteChan <- command
 
 					case "READY":
-						controlsReady <- true
+						p.ControlsReadyChan <- true
 					}
 
 				})
 			})
 
-			for _, track := range mediaStream.GetTracks() {
+			for _, track := range p.MediaStream.GetTracks() {
 				track.OnEnded(func(err error) {
 					log.Println("Track ended with error:", track.ID(), err)
 					defer track.Close()
@@ -229,44 +230,28 @@ func Init(
 				return
 			}
 
-			arenaDescriptionChan <- *peerConnection.LocalDescription()
+			p.ArenaDescriptionChan <- *peerConnection.LocalDescription()
 
 			candidatesMux.Lock()
 
 			for _, c := range pendingCandidates {
 				candidate := c.ToJSON()
-				arenaCandidateChan <- candidate
+				p.ArenaCandidateChan <- candidate
 			}
 
 			candidatesMux.Unlock()
 
-		case candidate := <-candidateChan:
+		case candidate := <-p.CandidateChan:
 			err := peerConnection.AddICECandidate(candidate)
 			if err != nil {
 				log.Println(err)
 			}
 
-		case <-quitWebRTCChan:
+		case <-p.QuitWebRTCChan:
 			if peerConnection != nil {
 				peerConnection.Close()
 			}
-			go Init(
-				id,
-				stunUrls,
-				api,
-				mediaStream,
-				descriptionChan,
-				candidateChan,
-				arenaDescriptionChan,
-				arenaCandidateChan,
-				webRTCConnectionStateChan,
-				sendDataChan,
-				quitWebRTCChan,
-				serialWrite,
-				controlsReady,
-				areControlsAllowedBySupervisor,
-				areBotsReady,
-			)
+			go Init(p)
 			return
 		}
 

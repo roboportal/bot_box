@@ -33,10 +33,12 @@ type ABot struct {
 
 func (b *ABot) SetIdle() {
 	b.Status = Idle
+	b.IsReady = false
 }
 
 func (b *ABot) SetConnecting() {
 	b.Status = Connecting
+	b.IsReady = false
 }
 
 func (b *ABot) SetConnected() {
@@ -58,19 +60,21 @@ func (b *ABot) NotifyAreControlsAllowedBySupervisorChange(state bool) {
 	}()
 }
 
-func (b *ABot) Run(
-	stunUrls []string,
-	tokenString string,
-	publicKey string,
-	api *webrtc.API,
-	mediaStream mediadevices.MediaStream,
-	wsWrite chan string,
-	serialWrite chan string,
-	serialRead chan string,
-	areControlsAllowedBySupervisor *bool,
-	areBotsReady *bool,
-	setBotReady func(int),
-) {
+type RunParams struct {
+	StunUrls                          []string
+	TokenString                       string
+	PublicKey                         string
+	Api                               *webrtc.API
+	MediaStream                       mediadevices.MediaStream
+	WsWriteChan                       chan string
+	SerialWriteChan                   chan string
+	SerialReadChan                    chan string
+	GetAreControlsAllowedBySupervisor func() bool
+	GetAreBotsReady                   func() bool
+	SetBotReady                       func(int)
+}
+
+func (b *ABot) Run(p RunParams) {
 
 	type CreateConnectionPayload struct {
 		Token     string `json:"token"`
@@ -87,8 +91,8 @@ func (b *ABot) Run(
 	message := CreateConnectionAction{
 		Name: "CREATE_CONNECTION",
 		Payload: CreateConnectionPayload{
-			Token:     tokenString,
-			PublicKey: publicKey,
+			Token:     p.TokenString,
+			PublicKey: p.PublicKey,
 			ID:        b.ID,
 		},
 	}
@@ -100,25 +104,27 @@ func (b *ABot) Run(
 		return
 	}
 
-	wsWrite <- string(br)
+	p.WsWriteChan <- string(br)
 
-	go botcom.Init(
-		b.ID,
-		stunUrls,
-		api,
-		mediaStream,
-		b.DescriptionChan,
-		b.CandidateChan,
-		b.ArenaDescriptionChan,
-		b.ArenaCandidateChan,
-		b.WebRTCConnectionStateChan,
-		b.SendDataChan,
-		b.QuitWebRTCChan,
-		serialWrite,
-		b.ControlsReadyChan,
-		areControlsAllowedBySupervisor,
-		areBotsReady,
-	)
+	botcomParams := botcom.InitParams{
+		Id:                                b.ID,
+		StunUrls:                          p.StunUrls,
+		Api:                               p.Api,
+		MediaStream:                       p.MediaStream,
+		DescriptionChan:                   b.DescriptionChan,
+		CandidateChan:                     b.CandidateChan,
+		ArenaDescriptionChan:              b.ArenaDescriptionChan,
+		ArenaCandidateChan:                b.ArenaCandidateChan,
+		WebRTCConnectionStateChan:         b.WebRTCConnectionStateChan,
+		SendDataChan:                      b.SendDataChan,
+		QuitWebRTCChan:                    b.QuitWebRTCChan,
+		SerialWriteChan:                   p.SerialWriteChan,
+		ControlsReadyChan:                 b.ControlsReadyChan,
+		GetAreControlsAllowedBySupervisor: p.GetAreControlsAllowedBySupervisor,
+		GetAreBotsReady:                   p.GetAreBotsReady,
+	}
+
+	go botcom.Init(botcomParams)
 
 	for {
 		select {
@@ -140,8 +146,8 @@ func (b *ABot) Run(
 			message := SetOfferAction{
 				Name: "SET_DESCRIPTION",
 				Payload: SetDescriptionPayload{
-					Token:       tokenString,
-					PublicKey:   publicKey,
+					Token:       p.TokenString,
+					PublicKey:   p.PublicKey,
 					Description: description,
 					ID:          b.ID,
 				},
@@ -153,7 +159,7 @@ func (b *ABot) Run(
 				log.Println(err)
 				return
 			}
-			wsWrite <- string(b)
+			p.WsWriteChan <- string(b)
 
 		case candidate := <-b.ArenaCandidateChan:
 			type SetCandidatePayload struct {
@@ -172,8 +178,8 @@ func (b *ABot) Run(
 			message := SetCandidateAction{
 				Name: "SET_CANDIDATE",
 				Payload: SetCandidatePayload{
-					Token:     tokenString,
-					PublicKey: publicKey,
+					Token:     p.TokenString,
+					PublicKey: p.PublicKey,
 					Candidate: candidate,
 					ID:        b.ID,
 				},
@@ -185,7 +191,7 @@ func (b *ABot) Run(
 				log.Println(err)
 				return
 			}
-			wsWrite <- string(b)
+			p.WsWriteChan <- string(b)
 
 		case state := <-b.WebRTCConnectionStateChan:
 			if state == webrtc.ICEConnectionStateConnected.String() {
@@ -202,12 +208,12 @@ func (b *ABot) Run(
 					Payload BotConnectedPayload `json:"payload"`
 				}
 
-				log.Println("Creating connection for bot: ", b.ID)
+				log.Println("Bot connected via WebRTC: ", b.ID)
 				message := BotConnectedAction{
 					Name: "BOT_CONNECTED",
 					Payload: BotConnectedPayload{
-						Token:     tokenString,
-						PublicKey: publicKey,
+						Token:     p.TokenString,
+						PublicKey: p.PublicKey,
 						ID:        b.ID,
 					},
 				}
@@ -219,7 +225,7 @@ func (b *ABot) Run(
 					return
 				}
 
-				wsWrite <- string(command)
+				p.WsWriteChan <- string(command)
 
 			}
 			if state == webrtc.ICEConnectionStateFailed.String() ||
@@ -238,12 +244,12 @@ func (b *ABot) Run(
 					Payload UnblockDisconnectedPayload `json:"payload"`
 				}
 
-				log.Println("Creating connection for bot: ", b.ID)
+				log.Println("Unblocking disconnected bot: ", b.ID)
 				message := UnblockDisconnectedAction{
 					Name: "UNBLOCK_DISCONNECTED",
 					Payload: UnblockDisconnectedPayload{
-						Token:     tokenString,
-						PublicKey: publicKey,
+						Token:     p.TokenString,
+						PublicKey: p.PublicKey,
 						ID:        b.ID,
 					},
 				}
@@ -255,7 +261,7 @@ func (b *ABot) Run(
 					return
 				}
 
-				wsWrite <- string(command)
+				p.WsWriteChan <- string(command)
 
 				go utils.TriggerChannel(b.QuitWebRTCChan)
 
@@ -275,7 +281,7 @@ func (b *ABot) Run(
 			}()
 
 			if state {
-				setBotReady(b.ID)
+				p.SetBotReady(b.ID)
 			}
 		}
 	}

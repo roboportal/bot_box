@@ -30,6 +30,7 @@ type ACommunicator struct {
 	doReconnect         chan struct{}
 	mu                  sync.Mutex
 	shutdownChan        chan struct{}
+	conStatChan         chan string
 }
 
 type InitParams struct {
@@ -42,6 +43,7 @@ type InitParams struct {
 	TokenString         string
 	PublicKey           string
 	ShutdownChan        chan struct{}
+	ConStatChan         chan string
 }
 
 func commFactory(p InitParams) ACommunicator {
@@ -57,19 +59,30 @@ func commFactory(p InitParams) ACommunicator {
 		publicKey:           p.PublicKey,
 		doReconnect:         make(chan struct{}),
 		shutdownChan:        p.ShutdownChan,
+		conStatChan:         p.ConStatChan,
 	}
 }
 
 func (comm *ACommunicator) setConnecting() {
 	comm.status = connecting
+	go (func() {
+		comm.conStatChan <- connecting
+	})()
+
 }
 
 func (comm *ACommunicator) setConnected() {
 	comm.status = connected
+	go (func() {
+		comm.conStatChan <- connected
+	})()
 }
 
 func (comm *ACommunicator) setDisconected() {
 	comm.status = disconnected
+	go (func() {
+		comm.conStatChan <- disconnected
+	})()
 }
 
 func (comm *ACommunicator) isConnected() bool {
@@ -87,6 +100,7 @@ func (comm *ACommunicator) handleConnection() {
 
 	for {
 		select {
+
 		case <-comm.doReconnect:
 			if comm.isConnecting() {
 				continue
@@ -94,6 +108,7 @@ func (comm *ACommunicator) handleConnection() {
 
 			comm.mu.Lock()
 			comm.setConnecting()
+			tickerP.Stop()
 
 			log.Println("Connecting to the platform.")
 
@@ -111,16 +126,10 @@ func (comm *ACommunicator) handleConnection() {
 				continue
 			}
 
-			// c.SetPongHandler(func(msg string) error {
-			// 	log.Println("Pong", msg)
-			// 	return nil
-			// })
-
-			c.SetWriteDeadline(time.Now().Add(time.Duration(comm.sendTimeoutSec) * time.Second))
 			comm.conn = c
 
 			comm.setConnected()
-
+			tickerP.Reset(time.Duration(comm.pingIntervalSec) * time.Second)
 			comm.mu.Unlock()
 
 			log.Println("Connected to the platform.")
@@ -137,9 +146,9 @@ func (comm *ACommunicator) handleConnection() {
 			if err != nil {
 				log.Println("WS Ping error:", err)
 
-				// if !comm.isConnecting() {
-				// 	go utils.TriggerChannel(comm.doReconnect)
-				// }
+				if !comm.isConnecting() {
+					go utils.TriggerChannel(comm.doReconnect)
+				}
 
 				continue
 			}
@@ -167,14 +176,14 @@ func (comm *ACommunicator) handleSend() {
 
 	for {
 		select {
+
 		case msg := <-comm.sendChan:
-			log.Println("message", msg, comm.isConnected())
 			if !comm.isConnected() {
 				continue
 			}
 
 			c := comm.conn
-
+			c.SetWriteDeadline(time.Now().Add(time.Duration(comm.sendTimeoutSec) * time.Second))
 			err := c.WriteMessage(websocket.TextMessage, []byte(msg))
 
 			if err != nil {
@@ -195,6 +204,7 @@ func (comm *ACommunicator) handleSend() {
 func (comm *ACommunicator) handleReceive() {
 	for {
 		select {
+
 		case <-comm.shutdownChan:
 			return
 
@@ -202,12 +212,16 @@ func (comm *ACommunicator) handleReceive() {
 			if !comm.isConnected() {
 				continue
 			}
+
 			_, message, err := comm.conn.ReadMessage()
+
 			if err != nil {
 				log.Println("WS receiving error", err)
+				go utils.TriggerChannel(comm.doReconnect)
+				time.Sleep(time.Duration(comm.reconnectTimeoutSec) * time.Second)
 				continue
 			}
-			log.Println("msg rec", string(message))
+
 			if message != nil {
 				comm.receiveChan <- string(message)
 			}
