@@ -15,11 +15,12 @@ import (
 )
 
 type AnArena struct {
-	WSRead                         chan string
-	WSWrite                        chan string
-	SerialWrite                    chan string
-	SerialRead                     chan string
-	Disconnect                     chan struct{}
+	WSReadChan                     chan string
+	WSWriteChan                    chan string
+	WSConStatChan                  chan string
+	SerialWriteChan                chan string
+	SerialReadChan                 chan string
+	DisconnectChan                 chan struct{}
 	TokenString                    string
 	PublicKey                      string
 	stunURLs                       []string
@@ -33,36 +34,38 @@ type AnArena struct {
 	areBotsReady                   bool
 }
 
-func Factory(
-	stunUrls []string,
-	tokenString string,
-	publicKey string,
-	nBots int,
+type InitParams struct {
+	StunUrls    []string
+	TokenString string
+	PublicKey   string
+	NBots       int
 
-	videoCodecBitRate int,
-	frameFormat string,
-	videoWidth int,
-	videoFrameRate int,
+	VideoCodecBitRate int
+	FrameFormat       string
+	VideoWidth        int
+	VideoFrameRate    int
+}
 
-) AnArena {
+func Factory(p InitParams) AnArena {
 	return AnArena{
-		WSRead:      make(chan string),
-		WSWrite:     make(chan string),
-		SerialWrite: make(chan string),
-		SerialRead:  make(chan string),
-		Disconnect:  make(chan struct{}),
+		WSReadChan:      make(chan string),
+		WSWriteChan:     make(chan string),
+		WSConStatChan:   make(chan string),
+		SerialWriteChan: make(chan string),
+		SerialReadChan:  make(chan string),
+		DisconnectChan:  make(chan struct{}),
 
-		TokenString: tokenString,
-		PublicKey:   publicKey,
-		stunURLs:    stunUrls,
+		TokenString: p.TokenString,
+		PublicKey:   p.PublicKey,
+		stunURLs:    p.StunUrls,
 
-		videoCodecBitRate: videoCodecBitRate,
-		frameFormat:       frameFormat,
-		videoWidth:        videoWidth,
-		videoFrameRate:    videoFrameRate,
+		videoCodecBitRate: p.VideoCodecBitRate,
+		frameFormat:       p.FrameFormat,
+		videoWidth:        p.VideoWidth,
+		videoFrameRate:    p.VideoFrameRate,
 
-		botsCount:                      nBots,
-		Bots:                           make([]*bot.ABot, nBots),
+		botsCount:                      p.NBots,
+		Bots:                           make([]*bot.ABot, p.NBots),
 		areControlsAllowedBySupervisor: true,
 		areBotsReady:                   false,
 	}
@@ -101,7 +104,23 @@ func (a *AnArena) setAreControlsAllowedBySupervisor(state bool) {
 	a.areControlsAllowedBySupervisor = state
 }
 
+func (a *AnArena) getAreControlsAllowedBySupervisor() bool {
+	return a.areControlsAllowedBySupervisor
+}
+
+func (a *AnArena) getAreBotsReady() bool {
+	return a.areBotsReady
+}
+
 func (a *AnArena) Run() {
+	log.Println("Arena: waiting for WS connection")
+	for stat := range a.WSConStatChan {
+		if stat == "connected" {
+			break
+		}
+	}
+
+	log.Println("Arena: WS connected")
 
 	codecSelector := getCodecSelector(a.videoCodecBitRate)
 
@@ -130,24 +149,25 @@ func (a *AnArena) Run() {
 		b := bot.Factory(index)
 		a.Bots[index] = &b
 
-		go b.Run(
-			a.stunURLs,
-			a.TokenString,
-			a.PublicKey,
-			api,
-			mediaStream,
-			a.WSWrite,
-			a.SerialWrite,
-			a.SerialRead,
-			&a.areControlsAllowedBySupervisor,
-			&a.areBotsReady,
-			a.SetBotReady,
-		)
+		botParams := bot.RunParams{
+			StunUrls:                          a.stunURLs,
+			TokenString:                       a.TokenString,
+			PublicKey:                         a.PublicKey,
+			Api:                               api,
+			MediaStream:                       mediaStream,
+			WsWriteChan:                       a.WSWriteChan,
+			SerialWriteChan:                   a.SerialWriteChan,
+			SerialReadChan:                    a.SerialReadChan,
+			GetAreControlsAllowedBySupervisor: a.getAreControlsAllowedBySupervisor,
+			GetAreBotsReady:                   a.getAreBotsReady,
+			SetBotReady:                       a.SetBotReady,
+		}
+		go b.Run(botParams)
 	}
 
 	for {
 		select {
-		case msg := <-a.WSRead:
+		case msg := <-a.WSReadChan:
 			type aData struct {
 				Action string
 				Data   string
@@ -226,7 +246,7 @@ func (a *AnArena) Run() {
 				continue
 			}
 
-		case serialMsg := <-a.SerialRead:
+		case serialMsg := <-a.SerialReadChan:
 			r := strings.NewReplacer(" ", "", "\t", "", "\n", "", "\r", "", "\x00", "")
 			sanitizedMsg := r.Replace(serialMsg)
 
