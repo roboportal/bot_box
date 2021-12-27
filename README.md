@@ -97,6 +97,10 @@ stopasgroup=true
 
 6. To start the bot box run `supervisorctl start bot-box`. There are some handy commands: `supervisorctl stop bot-box`, `supervisorctl restart bot-box`, `supervisorctl tail bot-box stdout`.
 
+# Video Tutorials
+
+Visit the ROBOPORTAL YouTube [channel](https://www.youtube.com/channel/UC-CswhfCJ-i4M9BcoTOE9oA) for the tutorials.
+
 # Contacts:
 
 [Join our Discord channel](https://discord.gg/WeAahmwMMv) or reach out over email: info@roboportal.io
