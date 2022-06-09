@@ -82,6 +82,11 @@ func (a *AnArena) SetBotReady(id int) {
 	}
 }
 
+func (a *AnArena) SetBotNotReady(id int) {
+	a.Bots[id].IsReady = false
+	a.areBotsReady = false
+}
+
 func (a *AnArena) AreBotsReady() bool {
 	for _, b := range a.Bots {
 		if !b.IsReady {
@@ -161,6 +166,7 @@ func (a *AnArena) Run() {
 			GetAreControlsAllowedBySupervisor: a.getAreControlsAllowedBySupervisor,
 			GetAreBotsReady:                   a.getAreBotsReady,
 			SetBotReady:                       a.SetBotReady,
+			SetBotNotReady:                    a.SetBotNotReady,
 		}
 		go b.Run(botParams)
 	}

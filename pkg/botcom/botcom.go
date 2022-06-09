@@ -131,7 +131,7 @@ func Init(p InitParams) {
 
 				// Register text message handling
 				d.OnMessage(func(msg webrtc.DataChannelMessage) {
-					// log.Println("Message from DataChannel:", id, d.Label(), string(msg.Data))
+					// log.Println("Message from DataChannel:", d.Label(), string(msg.Data))
 
 					message := string(msg.Data)
 
