@@ -72,6 +72,7 @@ type RunParams struct {
 	GetAreControlsAllowedBySupervisor func() bool
 	GetAreBotsReady                   func() bool
 	SetBotReady                       func(int)
+	SetBotNotReady                    func(int)
 }
 
 func (b *ABot) Run(p RunParams) {
@@ -282,6 +283,8 @@ func (b *ABot) Run(p RunParams) {
 
 			if state {
 				p.SetBotReady(b.ID)
+			} else {
+				p.SetBotNotReady(b.ID)
 			}
 		}
 	}
