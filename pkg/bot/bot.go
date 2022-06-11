@@ -101,7 +101,7 @@ func (b *ABot) Run(p RunParams) {
 	br, err := json.Marshal(message)
 
 	if err != nil {
-		log.Println(err)
+		log.Println("Serialize 'CREATE_CONNECTION' message to RoboPortal error", err)
 		return
 	}
 
@@ -157,7 +157,7 @@ func (b *ABot) Run(p RunParams) {
 			b, err := json.Marshal(message)
 
 			if err != nil {
-				log.Println(err)
+				log.Println("Serialize 'SET_DESCRIPTION' message to RoboPortal error", err)
 				return
 			}
 			p.WsWriteChan <- string(b)
@@ -189,7 +189,7 @@ func (b *ABot) Run(p RunParams) {
 			b, err := json.Marshal(message)
 
 			if err != nil {
-				log.Println(err)
+				log.Println("Serialize 'SET_CANDIDATE' message to RoboPortal error", err)
 				return
 			}
 			p.WsWriteChan <- string(b)
@@ -222,7 +222,7 @@ func (b *ABot) Run(p RunParams) {
 				command, err := json.Marshal(message)
 
 				if err != nil {
-					log.Println(err)
+					log.Println("Serialize 'BOT_CONNECTED' message to RoboPortal error", err)
 					return
 				}
 
@@ -258,7 +258,7 @@ func (b *ABot) Run(p RunParams) {
 				command, err := json.Marshal(message)
 
 				if err != nil {
-					log.Println(err)
+					log.Println("Serialize 'UNBLOCK_DISCONNECTED' message to RoboPortal error", err)
 					return
 				}
 

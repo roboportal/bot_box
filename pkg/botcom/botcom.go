@@ -56,7 +56,7 @@ func Init(p InitParams) {
 			peerConnection, err = p.Api.NewPeerConnection(config)
 
 			if err != nil {
-				log.Println(err)
+				log.Println("Create peerConnection error", err)
 				peerConnection.Close()
 				return
 			}
@@ -90,7 +90,7 @@ func Init(p InitParams) {
 
 			dataChannel, err := peerConnection.CreateDataChannel("controls", nil)
 			if err != nil {
-				log.Println(err)
+				log.Println("CreateDataChannel on peerConnection error", err)
 				peerConnection.Close()
 				return
 			}
@@ -118,7 +118,7 @@ func Init(p InitParams) {
 						case msg := <-p.SendDataChan:
 							err := d.SendText(msg)
 							if err != nil {
-								log.Println(err)
+								log.Println("Send data to Client App over data channel error", err)
 							}
 
 						case <-p.QuitWebRTCChan:
@@ -143,7 +143,7 @@ func Init(p InitParams) {
 					err := json.Unmarshal([]byte(message), &data)
 
 					if err != nil {
-						log.Println(err)
+						log.Println("Parse data channel message from Client App error", err)
 						peerConnection.Close()
 						return
 					}
@@ -169,7 +169,7 @@ func Init(p InitParams) {
 						err := json.Unmarshal([]byte(message), &data)
 
 						if err != nil {
-							log.Println(err)
+							log.Println("Parse 'CONTROLS' message over data channel from Client App error", err)
 							peerConnection.Close()
 							return
 						}
@@ -197,7 +197,7 @@ func Init(p InitParams) {
 					},
 				)
 				if err != nil {
-					log.Println(err)
+					log.Println("AddTransceiverFromTrack to peerConnection error", err)
 					peerConnection.Close()
 					return
 				}
@@ -209,7 +209,7 @@ func Init(p InitParams) {
 			err = peerConnection.SetRemoteDescription(description)
 
 			if err != nil {
-				log.Println(err)
+				log.Println("SetRemoteDescription to peerConnection error", err)
 				peerConnection.Close()
 				return
 			}
@@ -217,7 +217,7 @@ func Init(p InitParams) {
 			answer, err := peerConnection.CreateAnswer(nil)
 
 			if err != nil {
-				log.Println(err)
+				log.Println("CreateAnswer for Offer error", err)
 				peerConnection.Close()
 				return
 			}
@@ -225,7 +225,7 @@ func Init(p InitParams) {
 			err = peerConnection.SetLocalDescription(answer)
 
 			if err != nil {
-				log.Println(err)
+				log.Println("SetLocalDescription error", err)
 				peerConnection.Close()
 				return
 			}
@@ -244,7 +244,7 @@ func Init(p InitParams) {
 		case candidate := <-p.CandidateChan:
 			err := peerConnection.AddICECandidate(candidate)
 			if err != nil {
-				log.Println(err)
+				log.Println("AddICECandidate error", err)
 			}
 
 		case <-p.QuitWebRTCChan:

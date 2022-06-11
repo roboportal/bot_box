@@ -182,7 +182,7 @@ func (a *AnArena) Run() {
 			var data aData
 			err := json.Unmarshal([]byte(msg), &data)
 			if err != nil {
-				log.Println(err)
+				log.Println("Parse message from RoboPortal error", err)
 				continue
 			}
 			if data.Action == "DISCONNECT_ALL" {
@@ -196,7 +196,7 @@ func (a *AnArena) Run() {
 				var payload aPayload
 				err := json.Unmarshal([]byte(data.Data), &payload)
 				if err != nil {
-					log.Println(err)
+					log.Println("Parse 'TOGGLE_CONTROLS' message from RoboPortal error", err)
 					continue
 				}
 				a.setAreControlsAllowedBySupervisor(payload.AreControlsAllowed)
@@ -222,7 +222,7 @@ func (a *AnArena) Run() {
 				var d webrtc.SessionDescription
 				err := json.Unmarshal([]byte(data.Data), &d)
 				if err != nil {
-					log.Println(err)
+					log.Println("Parse 'SET_DESCRIPTION' message from RoboPortal error", err)
 					continue
 				}
 				b.DescriptionChan <- d
@@ -239,7 +239,7 @@ func (a *AnArena) Run() {
 				var d webrtc.ICECandidateInit
 				err := json.Unmarshal([]byte(data.Data), &d)
 				if err != nil {
-					log.Println(err)
+					log.Println("Parse 'SET_CANDIDATE' message from RoboPortal error", err)
 					continue
 				}
 				b.CandidateChan <- d
@@ -265,7 +265,7 @@ func (a *AnArena) Run() {
 			err := json.Unmarshal([]byte(sanitizedMsg), &t)
 
 			if err != nil {
-				log.Println(err)
+				log.Println("Parse telemetry message from robot error", err)
 				continue
 			}
 
