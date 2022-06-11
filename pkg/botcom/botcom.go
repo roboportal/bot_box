@@ -116,9 +116,13 @@ func Init(p InitParams) {
 					for {
 						select {
 						case msg := <-p.SendDataChan:
-							err := d.SendText(msg)
-							if err != nil {
-								log.Println("Send data to Client App over data channel error", err)
+							if peerConnection.ICEConnectionState() == webrtc.ICEConnectionStateConnected {
+								err := d.SendText(msg)
+								if err != nil {
+									log.Println("Send data to Client App over data channel error", err)
+								}
+							} else {
+								log.Println("Sending data to Client App over data channel when nt connected", d.Label(), d.ID())
 							}
 
 						case <-p.QuitWebRTCChan:
