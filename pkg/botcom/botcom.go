@@ -43,7 +43,6 @@ func enableControls(serialWriteChan chan string, id int) {
 }
 
 func Init(p InitParams) {
-	enableControls(p.SerialWriteChan, p.Id)
 
 	config := webrtc.Configuration{
 		ICEServers: []webrtc.ICEServer{
@@ -126,6 +125,8 @@ func Init(p InitParams) {
 				d.OnOpen(func() {
 					log.Println("Data channel open:", d.Label(), d.ID())
 
+					enableControls(p.SerialWriteChan, p.Id)
+
 					for {
 						select {
 						case msg := <-p.SendDataChan:
@@ -199,6 +200,7 @@ func Init(p InitParams) {
 						p.SerialWriteChan <- command
 
 					case "READY":
+						enableControls(p.SerialWriteChan, p.Id)
 						p.ControlsReadyChan <- true
 					}
 
