@@ -225,6 +225,7 @@ func Init(p InitParams) {
 
 			if err != nil {
 				log.Println("SetRemoteDescription to peerConnection error", err)
+				haltControls(p.SerialWriteChan, p.Id)
 				peerConnection.Close()
 				return
 			}
@@ -266,9 +267,9 @@ func Init(p InitParams) {
 
 		case <-p.QuitWebRTCChan:
 			if peerConnection != nil {
-				haltControls(p.SerialWriteChan, p.Id)
 				peerConnection.Close()
 			}
+			haltControls(p.SerialWriteChan, p.Id)
 			go Init(p)
 			return
 		}
