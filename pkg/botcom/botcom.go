@@ -32,6 +32,11 @@ type InitParams struct {
 	GetAreBotsReady                   func() bool
 }
 
+func haltControls(serialWriteChan chan string, id int) {
+	command := fmt.Sprintf("{\"address\":%d,\"controls\":{\"stop\":true}}", id)
+	serialWriteChan <- command
+}
+
 func Init(p InitParams) {
 
 	config := webrtc.Configuration{
@@ -57,9 +62,11 @@ func Init(p InitParams) {
 
 			if err != nil {
 				log.Println("Create peerConnection error", err)
+				haltControls(p.SerialWriteChan, p.Id)
 				peerConnection.Close()
 				return
 			}
+			defer haltControls(p.SerialWriteChan, p.Id)
 			defer peerConnection.Close()
 
 			p.ControlsReadyChan <- false
@@ -91,10 +98,10 @@ func Init(p InitParams) {
 			dataChannel, err := peerConnection.CreateDataChannel("controls", nil)
 			if err != nil {
 				log.Println("CreateDataChannel on peerConnection error", err)
+				haltControls(p.SerialWriteChan, p.Id)
 				peerConnection.Close()
 				return
 			}
-
 			defer dataChannel.Close()
 			// Register channel opening handling
 			dataChannel.OnOpen(func() {
@@ -126,6 +133,7 @@ func Init(p InitParams) {
 							}
 
 						case <-p.QuitWebRTCChan:
+							haltControls(p.SerialWriteChan, p.Id)
 							d.Close()
 							return
 						}
@@ -148,6 +156,7 @@ func Init(p InitParams) {
 
 					if err != nil {
 						log.Println("Parse data channel message from Client App error", err)
+						haltControls(p.SerialWriteChan, p.Id)
 						peerConnection.Close()
 						return
 					}
@@ -174,6 +183,7 @@ func Init(p InitParams) {
 
 						if err != nil {
 							log.Println("Parse 'CONTROLS' message over data channel from Client App error", err)
+							haltControls(p.SerialWriteChan, p.Id)
 							peerConnection.Close()
 							return
 						}
@@ -202,6 +212,7 @@ func Init(p InitParams) {
 				)
 				if err != nil {
 					log.Println("AddTransceiverFromTrack to peerConnection error", err)
+					haltControls(p.SerialWriteChan, p.Id)
 					peerConnection.Close()
 					return
 				}
@@ -222,6 +233,7 @@ func Init(p InitParams) {
 
 			if err != nil {
 				log.Println("CreateAnswer for Offer error", err)
+				haltControls(p.SerialWriteChan, p.Id)
 				peerConnection.Close()
 				return
 			}
@@ -230,6 +242,7 @@ func Init(p InitParams) {
 
 			if err != nil {
 				log.Println("SetLocalDescription error", err)
+				haltControls(p.SerialWriteChan, p.Id)
 				peerConnection.Close()
 				return
 			}
@@ -253,6 +266,7 @@ func Init(p InitParams) {
 
 		case <-p.QuitWebRTCChan:
 			if peerConnection != nil {
+				haltControls(p.SerialWriteChan, p.Id)
 				peerConnection.Close()
 			}
 			go Init(p)
