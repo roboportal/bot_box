@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/pion/mediadevices"
+	"github.com/roboportal/bot_box/pkg/utils"
 
 	"github.com/pion/webrtc/v3"
 
@@ -140,8 +141,10 @@ func Init(p InitParams) {
 							}
 
 						case <-p.QuitWebRTCChan:
+							log.Println("Closing data channel for bot:", p.Id)
 							d.Close()
 							haltControls(p.SerialWriteChan, p.Id)
+							utils.TriggerChannel(p.QuitWebRTCChan)
 							return
 						}
 
@@ -274,6 +277,7 @@ func Init(p InitParams) {
 			}
 
 		case <-p.QuitWebRTCChan:
+			log.Println("Quiting WebRTC for bot:", p.Id)
 			if peerConnection != nil {
 				peerConnection.Close()
 			}
