@@ -161,6 +161,7 @@ func (a *AnArena) Run() {
 			Api:                               api,
 			MediaStream:                       mediaStream,
 			WsWriteChan:                       a.WSWriteChan,
+			WSConStatChan:                     a.WSConStatChan,
 			SerialWriteChan:                   a.SerialWriteChan,
 			SerialReadChan:                    a.SerialReadChan,
 			GetAreControlsAllowedBySupervisor: a.getAreControlsAllowedBySupervisor,

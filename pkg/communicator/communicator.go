@@ -64,6 +64,7 @@ func commFactory(p InitParams) ACommunicator {
 }
 
 func (comm *ACommunicator) setConnecting() {
+	log.Println("WS connecting")
 	comm.status = connecting
 	go (func() {
 		comm.conStatChan <- connecting
@@ -72,13 +73,15 @@ func (comm *ACommunicator) setConnecting() {
 }
 
 func (comm *ACommunicator) setConnected() {
+	log.Println("WS connected")
 	comm.status = connected
 	go (func() {
 		comm.conStatChan <- connected
 	})()
 }
 
-func (comm *ACommunicator) setDisconected() {
+func (comm *ACommunicator) setDisconnected() {
+	log.Println("WS disconnected")
 	comm.status = disconnected
 	go (func() {
 		comm.conStatChan <- disconnected
@@ -121,7 +124,7 @@ func (comm *ACommunicator) handleConnection() {
 
 				go utils.TriggerChannel(comm.doReconnect)
 
-				comm.setDisconected()
+				comm.setDisconnected()
 				comm.mu.Unlock()
 				continue
 			}
@@ -163,7 +166,7 @@ func (comm *ACommunicator) handleConnection() {
 			}
 
 			c.Close()
-			comm.setDisconected()
+			comm.setDisconnected()
 			return
 
 		default:

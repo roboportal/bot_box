@@ -67,6 +67,7 @@ type RunParams struct {
 	Api                               *webrtc.API
 	MediaStream                       mediadevices.MediaStream
 	WsWriteChan                       chan string
+	WSConStatChan                     chan string
 	SerialWriteChan                   chan string
 	SerialReadChan                    chan string
 	GetAreControlsAllowedBySupervisor func() bool
@@ -74,29 +75,31 @@ type RunParams struct {
 	SetBotReady                       func(int)
 	SetBotNotReady                    func(int)
 }
+type CreateConnectionPayload struct {
+	Token     string `json:"token"`
+	PublicKey string `json:"publicKey"`
+	ID        int    `json:"id"`
+}
 
-func (b *ABot) Run(p RunParams) {
+type CreateConnectionAction struct {
+	Name    string                  `json:"name"`
+	Payload CreateConnectionPayload `json:"payload"`
+}
 
-	type CreateConnectionPayload struct {
-		Token     string `json:"token"`
-		PublicKey string `json:"publicKey"`
-		ID        int    `json:"id"`
-	}
-
-	type CreateConnectionAction struct {
-		Name    string                  `json:"name"`
-		Payload CreateConnectionPayload `json:"payload"`
-	}
-
-	log.Println("Creating connection for bot: ", b.ID)
-	message := CreateConnectionAction{
+func buildCreateConnectionMessage(id int, publicKey string, tokenString string) CreateConnectionAction {
+	return CreateConnectionAction{
 		Name: "CREATE_CONNECTION",
 		Payload: CreateConnectionPayload{
-			Token:     p.TokenString,
-			PublicKey: p.PublicKey,
-			ID:        b.ID,
+			Token:     tokenString,
+			PublicKey: publicKey,
+			ID:        id,
 		},
 	}
+}
+
+func (b *ABot) Run(p RunParams) {
+	log.Println("Creating connection for bot: ", b.ID)
+	message := buildCreateConnectionMessage(b.ID, p.PublicKey, p.TokenString)
 
 	br, err := json.Marshal(message)
 
@@ -285,6 +288,22 @@ func (b *ABot) Run(p RunParams) {
 				p.SetBotReady(b.ID)
 			} else {
 				p.SetBotNotReady(b.ID)
+			}
+
+		case wsConnectionStatus := <-p.WSConStatChan:
+			if wsConnectionStatus == "connected" {
+				log.Println("RE-creating connection for bot: ", b.ID)
+
+				message := buildCreateConnectionMessage(b.ID, p.PublicKey, p.TokenString)
+
+				br, err := json.Marshal(message)
+
+				if err != nil {
+					log.Println("Serialize 'CREATE_CONNECTION' message to RoboPortal error", err)
+					return
+				}
+
+				p.WsWriteChan <- string(br)
 			}
 		}
 	}
