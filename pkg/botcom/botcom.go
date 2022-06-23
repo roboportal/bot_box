@@ -200,7 +200,9 @@ func Init(p InitParams) {
 
 						command := fmt.Sprintf("{\"address\":%d,\"controls\":%s}", p.Id, data.Payload)
 
-						p.SerialWriteChan <- command
+						go (func() {
+							p.SerialWriteChan <- command
+						})()
 
 					case "READY":
 						enableControls(p.SerialWriteChan, p.Id)
