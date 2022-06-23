@@ -226,7 +226,9 @@ func (comm *ACommunicator) handleReceive() {
 			}
 
 			if message != nil {
-				comm.receiveChan <- string(message)
+				go (func(message []byte) {
+					comm.receiveChan <- string(message)
+				})(message)
 			}
 		}
 
