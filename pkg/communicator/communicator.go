@@ -29,7 +29,6 @@ type ACommunicator struct {
 	conn                *websocket.Conn
 	doReconnect         chan struct{}
 	mu                  sync.Mutex
-	shutdownChan        chan struct{}
 	conStatChan         chan string
 }
 
@@ -42,7 +41,6 @@ type InitParams struct {
 	SendTimeoutSec      int
 	TokenString         string
 	PublicKey           string
-	ShutdownChan        chan struct{}
 	ConStatChan         chan string
 }
 
@@ -58,7 +56,6 @@ func commFactory(p InitParams) ACommunicator {
 		tokenString:         p.TokenString,
 		publicKey:           p.PublicKey,
 		doReconnect:         make(chan struct{}),
-		shutdownChan:        p.ShutdownChan,
 		conStatChan:         p.ConStatChan,
 	}
 }
@@ -66,26 +63,20 @@ func commFactory(p InitParams) ACommunicator {
 func (comm *ACommunicator) setConnecting() {
 	log.Println("WS connecting")
 	comm.status = connecting
-	go (func() {
-		comm.conStatChan <- connecting
-	})()
+	comm.conStatChan <- connecting
 
 }
 
 func (comm *ACommunicator) setConnected() {
 	log.Println("WS connected")
 	comm.status = connected
-	go (func() {
-		comm.conStatChan <- connected
-	})()
+	comm.conStatChan <- connected
 }
 
 func (comm *ACommunicator) setDisconnected() {
 	log.Println("WS disconnected")
 	comm.status = disconnected
-	go (func() {
-		comm.conStatChan <- disconnected
-	})()
+	comm.conStatChan <- disconnected
 }
 
 func (comm *ACommunicator) isConnected() bool {
@@ -122,10 +113,12 @@ func (comm *ACommunicator) handleConnection() {
 
 				time.Sleep(time.Duration(comm.reconnectTimeoutSec) * time.Second)
 
+				comm.setDisconnected()
+
+				comm.mu.Unlock()
+
 				go utils.TriggerChannel(comm.doReconnect)
 
-				comm.setDisconnected()
-				comm.mu.Unlock()
 				continue
 			}
 
@@ -150,27 +143,9 @@ func (comm *ACommunicator) handleConnection() {
 				log.Println("WS Ping error:", err)
 
 				if !comm.isConnecting() {
-					go utils.TriggerChannel(comm.doReconnect)
+					utils.TriggerChannel(comm.doReconnect)
 				}
-
-				continue
 			}
-
-		case <-comm.shutdownChan:
-			c := comm.conn
-
-			err := c.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""), time.Now().Add(time.Duration(comm.sendTimeoutSec)*time.Second))
-
-			if err != nil {
-				log.Println("WS Close error:", err)
-			}
-
-			c.Close()
-			comm.setDisconnected()
-			return
-
-		default:
-			continue
 		}
 	}
 }
@@ -193,23 +168,13 @@ func (comm *ACommunicator) handleSend() {
 				log.Println("Send WS data error:", err)
 				continue
 			}
-
-		case <-comm.shutdownChan:
-			return
-
-		default:
-			continue
 		}
-
 	}
 }
 
 func (comm *ACommunicator) handleReceive() {
 	for {
 		select {
-
-		case <-comm.shutdownChan:
-			return
 
 		default:
 			if !comm.isConnected() {
@@ -226,12 +191,9 @@ func (comm *ACommunicator) handleReceive() {
 			}
 
 			if message != nil {
-				go (func(message []byte) {
-					comm.receiveChan <- string(message)
-				})(message)
+				comm.receiveChan <- string(message)
 			}
 		}
-
 	}
 }
 
@@ -240,7 +202,8 @@ func Init(p InitParams) {
 	comm := commFactory(p)
 
 	go comm.handleConnection()
-	go utils.TriggerChannel(comm.doReconnect)
+	utils.TriggerChannel(comm.doReconnect)
+
 	go comm.handleSend()
 	go comm.handleReceive()
 }

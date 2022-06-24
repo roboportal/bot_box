@@ -55,9 +55,8 @@ func (b *ABot) NotifyAreControlsAllowedBySupervisorChange(state bool) {
 		status = "ALLOWED"
 	}
 	command := fmt.Sprintf("{\"type\": \"CONTROLS_SUPERVISOR_STATUS_CHANGE\", \"payload\": {\"status\": \"%s\"}}", status)
-	go func() {
-		b.SendDataChan <- command
-	}()
+
+	b.SendDataChan <- command
 }
 
 type RunParams struct {
@@ -163,6 +162,7 @@ func (b *ABot) Run(p RunParams) {
 				log.Println("Serialize 'SET_DESCRIPTION' message to RoboPortal error", err)
 				return
 			}
+
 			p.WsWriteChan <- string(b)
 
 		case candidate := <-b.ArenaCandidateChan:
@@ -195,6 +195,7 @@ func (b *ABot) Run(p RunParams) {
 				log.Println("Serialize 'SET_CANDIDATE' message to RoboPortal error", err)
 				return
 			}
+
 			p.WsWriteChan <- string(b)
 
 		case state := <-b.WebRTCConnectionStateChan:
@@ -267,8 +268,7 @@ func (b *ABot) Run(p RunParams) {
 
 				p.WsWriteChan <- string(command)
 
-				go utils.TriggerChannel(b.QuitWebRTCChan)
-
+				utils.TriggerChannel(b.QuitWebRTCChan)
 			}
 
 		case state := <-b.ControlsReadyChan:
@@ -280,9 +280,7 @@ func (b *ABot) Run(p RunParams) {
 			}
 			command := fmt.Sprintf("{\"type\": \"CONTROLS_STATUS_CHANGE\", \"payload\": {\"status\": \"%s\"}}", status)
 
-			go func() {
-				b.SendDataChan <- command
-			}()
+			b.SendDataChan <- command
 
 			if state {
 				p.SetBotReady(b.ID)
@@ -317,7 +315,7 @@ func Factory(id int) ABot {
 		CandidateChan:             make(chan webrtc.ICECandidateInit),
 		ArenaDescriptionChan:      make(chan webrtc.SessionDescription),
 		ArenaCandidateChan:        make(chan webrtc.ICECandidateInit),
-		SendDataChan:              make(chan string),
+		SendDataChan:              make(chan string, 100),
 		ControlsReadyChan:         make(chan bool),
 		ID:                        id,
 		Status:                    Idle,

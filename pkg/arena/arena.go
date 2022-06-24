@@ -48,11 +48,11 @@ type InitParams struct {
 
 func Factory(p InitParams) AnArena {
 	return AnArena{
-		WSReadChan:      make(chan string),
-		WSWriteChan:     make(chan string),
+		WSReadChan:      make(chan string, 1000),
+		WSWriteChan:     make(chan string, 1000),
 		WSConStatChan:   make(chan string),
-		SerialWriteChan: make(chan string),
-		SerialReadChan:  make(chan string),
+		SerialWriteChan: make(chan string, 1000),
+		SerialReadChan:  make(chan string, 1000),
 		DisconnectChan:  make(chan struct{}),
 
 		TokenString: p.TokenString,
@@ -98,10 +98,8 @@ func (a *AnArena) AreBotsReady() bool {
 
 func (a *AnArena) disconnectAllBots() {
 	for _, b := range a.Bots {
-		go func(b *bot.ABot) {
-			b.SendDataChan <- "{\"type\": \"DISCONNECTED_BY_ADMIN\"}"
-			utils.TriggerChannel(b.QuitWebRTCChan)
-		}(b)
+		b.SendDataChan <- "{\"type\": \"DISCONNECTED_BY_ADMIN\"}"
+		utils.TriggerChannel(b.QuitWebRTCChan)
 	}
 }
 
@@ -119,6 +117,7 @@ func (a *AnArena) getAreBotsReady() bool {
 
 func (a *AnArena) Run() {
 	log.Println("Arena: waiting for WS connection")
+
 	for stat := range a.WSConStatChan {
 		if stat == "connected" {
 			break
@@ -145,6 +144,7 @@ func (a *AnArena) Run() {
 	})
 
 	if err != nil {
+		log.Println("GetUserMedia error", err)
 		panic(err)
 	}
 
@@ -180,12 +180,16 @@ func (a *AnArena) Run() {
 				Data   string
 				ID     int
 			}
+
 			var data aData
+
 			err := json.Unmarshal([]byte(msg), &data)
+
 			if err != nil {
 				log.Println("Parse message from RoboPortal error", err)
 				continue
 			}
+
 			if data.Action == "DISCONNECT_ALL" {
 				a.disconnectAllBots()
 			}
@@ -194,12 +198,16 @@ func (a *AnArena) Run() {
 				type aPayload struct {
 					AreControlsAllowed bool
 				}
+
 				var payload aPayload
+
 				err := json.Unmarshal([]byte(data.Data), &payload)
+
 				if err != nil {
 					log.Println("Parse 'TOGGLE_CONTROLS' message from RoboPortal error", err)
 					continue
 				}
+
 				a.setAreControlsAllowedBySupervisor(payload.AreControlsAllowed)
 
 				for _, b := range a.Bots {
@@ -218,14 +226,18 @@ func (a *AnArena) Run() {
 					log.Println("Bot is not connected when set description:", b.ID)
 					continue
 				}
+
 				b.SetConnecting()
 				log.Println("Set description for bot: ", b.ID)
+
 				var d webrtc.SessionDescription
 				err := json.Unmarshal([]byte(data.Data), &d)
+
 				if err != nil {
 					log.Println("Parse 'SET_DESCRIPTION' message from RoboPortal error", err)
 					continue
 				}
+
 				b.DescriptionChan <- d
 				continue
 			}
@@ -237,19 +249,26 @@ func (a *AnArena) Run() {
 				}
 
 				log.Println("Set candidate for bot:", b.ID, b.Status)
+
 				var d webrtc.ICECandidateInit
+
 				err := json.Unmarshal([]byte(data.Data), &d)
+
 				if err != nil {
 					log.Println("Parse 'SET_CANDIDATE' message from RoboPortal error", err)
+
 					continue
 				}
+
 				b.CandidateChan <- d
+
 				continue
 			}
 
 			if data.Action == "DISCONNECT_BOT" {
 				log.Println("Disconnect bot: ", b.ID)
-				go utils.TriggerChannel(b.QuitWebRTCChan)
+				utils.TriggerChannel(b.QuitWebRTCChan)
+
 				continue
 			}
 
@@ -272,9 +291,7 @@ func (a *AnArena) Run() {
 
 			if a.Bots[t.ID].Status == bot.Connected {
 				telemetry := fmt.Sprintf("{\"type\": \"TELEMETRY\", \"payload\": %s}", sanitizedMsg)
-				go func() {
-					a.Bots[t.ID].SendDataChan <- telemetry
-				}()
+				a.Bots[t.ID].SendDataChan <- telemetry
 			}
 		}
 	}
