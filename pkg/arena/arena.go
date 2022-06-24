@@ -50,10 +50,10 @@ func Factory(p InitParams) AnArena {
 	return AnArena{
 		WSReadChan:      make(chan string, 1000),
 		WSWriteChan:     make(chan string, 1000),
-		WSConStatChan:   make(chan string),
+		WSConStatChan:   make(chan string, 1),
 		SerialWriteChan: make(chan string, 1000),
 		SerialReadChan:  make(chan string, 1000),
-		DisconnectChan:  make(chan struct{}),
+		DisconnectChan:  make(chan struct{}, 1),
 
 		TokenString: p.TokenString,
 		PublicKey:   p.PublicKey,

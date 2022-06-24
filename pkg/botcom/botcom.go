@@ -138,7 +138,7 @@ func Init(p InitParams) {
 									log.Println("Send data to Client App over data channel error", err)
 								}
 							} else {
-								log.Println("Sending data to Client App over data channel when nt connected", d.Label(), d.ID())
+								log.Println("Sending data to Client App over data channel when not connected", d.Label(), d.ID())
 							}
 
 						case <-closeDataChannelChan:
@@ -278,7 +278,7 @@ func Init(p InitParams) {
 			if peerConnection != nil {
 				peerConnection.Close()
 			}
-			defer utils.TriggerChannel(closeDataChannelChan)
+			go utils.TriggerChannel(closeDataChannelChan)
 			defer haltControls(p.SerialWriteChan, p.Id)
 			defer Init(p)
 			return
