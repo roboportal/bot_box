@@ -59,8 +59,6 @@ func main() {
 		panic(err)
 	}
 
-	shutdownChan := make(chan struct{})
-
 	arenaParams := arena.InitParams{
 		StunUrls:    stunUrls,
 		TokenString: tokenString,
@@ -76,14 +74,13 @@ func main() {
 	_arena := arena.Factory(arenaParams)
 
 	serialParams := serial.InitParams{
-		PortName:     portName,
-		BaudRate:     int(baudRate),
-		SendChan:     _arena.SerialWriteChan,
-		ReceiveChan:  _arena.SerialReadChan,
-		ShutdownChan: shutdownChan,
+		PortName:    portName,
+		BaudRate:    int(baudRate),
+		SendChan:    _arena.SerialWriteChan,
+		ReceiveChan: _arena.SerialReadChan,
 	}
 
-	go serial.Init(serialParams)
+	serial.Init(serialParams)
 
 	communicatorParams := communicator.InitParams{
 		PlatformUri:         srvURL,
@@ -94,10 +91,10 @@ func main() {
 		SendTimeoutSec:      1,
 		TokenString:         tokenString,
 		PublicKey:           publicKey,
-		ShutdownChan:        shutdownChan,
 		ConStatChan:         _arena.WSConStatChan,
 	}
-	go communicator.Init(communicatorParams)
+
+	communicator.Init(communicatorParams)
 
 	go _arena.Run()
 

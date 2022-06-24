@@ -8,18 +8,16 @@ import (
 )
 
 type InitParams struct {
-	PortName     string
-	BaudRate     int
-	SendChan     chan string
-	ReceiveChan  chan string
-	ShutdownChan chan struct{}
+	PortName    string
+	BaudRate    int
+	SendChan    chan string
+	ReceiveChan chan string
 }
 
 type ASerial struct {
-	serial       *serial.Port
-	sendChan     chan string
-	receiveChan  chan string
-	shutdownChan chan struct{}
+	serial      *serial.Port
+	sendChan    chan string
+	receiveChan chan string
 }
 
 func serialFactory(p InitParams) ASerial {
@@ -32,25 +30,19 @@ func serialFactory(p InitParams) ASerial {
 	}
 
 	return ASerial{
-		serial:       s,
-		sendChan:     p.SendChan,
-		receiveChan:  p.ReceiveChan,
-		shutdownChan: p.ShutdownChan,
+		serial:      s,
+		sendChan:    p.SendChan,
+		receiveChan: p.ReceiveChan,
 	}
 }
 
 func (s *ASerial) handleSend() {
 	for {
 		select {
-		case <-s.shutdownChan:
-			s.serial.Close()
-			return
 		case msg := <-s.sendChan:
 			_, err := s.serial.Write([]byte(msg + "\n"))
 			if err != nil {
-				log.Println("Serual write error:", err)
-				s.shutdownChan <- struct{}{}
-				return
+				log.Println("Serial write error:", err)
 			}
 		}
 	}
@@ -61,10 +53,7 @@ func (s *ASerial) handleReceive() {
 
 	for scanner.Scan() {
 		data := scanner.Text()
-
-		go func(data string) {
-			s.receiveChan <- data
-		}(data)
+		s.receiveChan <- data
 	}
 }
 
