@@ -28,8 +28,11 @@ type ACommunicator struct {
 	publicKey           string
 	conn                *websocket.Conn
 	doReconnect         chan struct{}
+	stopSending         chan struct{}
+	stopReceiving       chan struct{}
 	mu                  sync.Mutex
 	conStatChan         chan string
+	awaitingPong        bool
 }
 
 type InitParams struct {
@@ -56,7 +59,10 @@ func commFactory(p InitParams) ACommunicator {
 		tokenString:         p.TokenString,
 		publicKey:           p.PublicKey,
 		doReconnect:         make(chan struct{}),
+		stopSending:         make(chan struct{}),
+		stopReceiving:       make(chan struct{}),
 		conStatChan:         p.ConStatChan,
+		awaitingPong:        false,
 	}
 }
 
@@ -88,62 +94,88 @@ func (comm *ACommunicator) isConnecting() bool {
 }
 
 func (comm *ACommunicator) handleConnection() {
+	defer (func() {
+		time.Sleep(time.Duration(comm.reconnectTimeoutSec) * time.Second)
+		go comm.handleConnection()
+	})()
 
 	headers := http.Header{"x-public-key": {comm.publicKey}}
 	tickerP := time.NewTicker(time.Duration(comm.pingIntervalSec) * time.Second)
 
+	defer tickerP.Stop()
+
+	comm.mu.Lock()
+
+	comm.awaitingPong = false
+	comm.setConnecting()
+	tickerP.Stop()
+
+	log.Println("Connecting to the platform.")
+
+	c, _, err := websocket.DefaultDialer.Dial(comm.platformUri, headers)
+
+	if err != nil {
+		log.Println("Connection failed error:", err)
+
+		time.Sleep(time.Duration(comm.reconnectTimeoutSec) * time.Second)
+
+		comm.setDisconnected()
+
+		comm.mu.Unlock()
+
+		return
+	}
+
+	comm.conn = c
+
+	defer c.Close()
+
+	c.SetPongHandler(func(d string) error {
+		comm.mu.Lock()
+		comm.awaitingPong = false
+		comm.mu.Unlock()
+		return nil
+	})
+
+	comm.setConnected()
+
+	go comm.handleSend()
+	go comm.handleReceive()
+
+	tickerP.Reset(time.Duration(comm.pingIntervalSec) * time.Second)
+	comm.mu.Unlock()
+
+	log.Println("Connected to the platform.")
+
 	for {
 		select {
-
 		case <-comm.doReconnect:
-			if comm.isConnecting() {
-				continue
-			}
-
-			comm.mu.Lock()
-			comm.setConnecting()
-			tickerP.Stop()
-
-			log.Println("Connecting to the platform.")
-
-			c, _, err := websocket.DefaultDialer.Dial(comm.platformUri, headers)
-
-			if err != nil {
-				log.Println("Connection failed error:", err)
-
-				time.Sleep(time.Duration(comm.reconnectTimeoutSec) * time.Second)
-
-				comm.setDisconnected()
-
-				comm.mu.Unlock()
-
-				go utils.TriggerChannel(comm.doReconnect)
-
-				continue
-			}
-
-			comm.conn = c
-
-			comm.setConnected()
-			tickerP.Reset(time.Duration(comm.pingIntervalSec) * time.Second)
-			comm.mu.Unlock()
-
-			log.Println("Connected to the platform.")
+			go utils.TriggerChannel(comm.stopReceiving)
+			go utils.TriggerChannel(comm.stopSending)
+			return
 
 		case <-tickerP.C:
 			if !comm.isConnected() {
 				continue
 			}
 
+			if comm.awaitingPong {
+				return
+			}
+
 			c := comm.conn
 
+			comm.mu.Lock()
 			err := c.WriteControl(websocket.PingMessage, []byte(comm.publicKey), time.Now().Add(time.Duration(comm.sendTimeoutSec)*time.Second))
+
+			comm.awaitingPong = true
+			comm.mu.Unlock()
 
 			if err != nil {
 				log.Println("WS Ping error:", err)
 
 				if !comm.isConnecting() {
-					utils.TriggerChannel(comm.doReconnect)
+					return
 				}
 			}
 		}
@@ -151,9 +183,10 @@ func (comm *ACommunicator) handleConnection() {
 }
 
 func (comm *ACommunicator) handleSend() {
-
 	for {
 		select {
+		case <-comm.stopSending:
+			return
 
 		case msg := <-comm.sendChan:
 			if !comm.isConnected() {
@@ -162,11 +195,14 @@ func (comm *ACommunicator) handleSend() {
 
 			c := comm.conn
 			c.SetWriteDeadline(time.Now().Add(time.Duration(comm.sendTimeoutSec) * time.Second))
+
+			comm.mu.Lock()
 			err := c.WriteMessage(websocket.TextMessage, []byte(msg))
+			comm.mu.Unlock()
 
 			if err != nil {
 				log.Println("Send WS data error:", err)
-				continue
+				return
 			}
 		}
 	}
@@ -175,6 +211,8 @@ func (comm *ACommunicator) handleSend() {
 func (comm *ACommunicator) handleReceive() {
 	for {
 		select {
+		case <-comm.stopReceiving:
+			return
 
 		default:
 			if !comm.isConnected() {
@@ -185,9 +223,7 @@ func (comm *ACommunicator) handleReceive() {
 
 			if err != nil {
 				log.Println("WS receiving error", err)
-				go utils.TriggerChannel(comm.doReconnect)
-				time.Sleep(time.Duration(comm.reconnectTimeoutSec) * time.Second)
-				continue
+				return
 			}
 
 			if message != nil {
@@ -202,8 +238,5 @@ func Init(p InitParams) {
 	comm := commFactory(p)
 
 	go comm.handleConnection()
-	utils.TriggerChannel(comm.doReconnect)
 
-	go comm.handleSend()
-	go comm.handleReceive()
 }

@@ -279,8 +279,8 @@ func Init(p InitParams) {
 				peerConnection.Close()
 			}
 			go utils.TriggerChannel(closeDataChannelChan)
-			defer haltControls(p.SerialWriteChan, p.Id)
-			defer Init(p)
+			go haltControls(p.SerialWriteChan, p.Id)
+			go Init(p)
 			return
 		}
 

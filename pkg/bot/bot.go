@@ -309,12 +309,12 @@ func (b *ABot) Run(p RunParams) {
 
 func Factory(id int) ABot {
 	return ABot{
-		QuitWebRTCChan:            make(chan struct{}),
-		WebRTCConnectionStateChan: make(chan string),
-		DescriptionChan:           make(chan webrtc.SessionDescription),
-		CandidateChan:             make(chan webrtc.ICECandidateInit),
-		ArenaDescriptionChan:      make(chan webrtc.SessionDescription),
-		ArenaCandidateChan:        make(chan webrtc.ICECandidateInit),
+		QuitWebRTCChan:            make(chan struct{}, 1),
+		WebRTCConnectionStateChan: make(chan string, 1),
+		DescriptionChan:           make(chan webrtc.SessionDescription, 1),
+		CandidateChan:             make(chan webrtc.ICECandidateInit, 1),
+		ArenaDescriptionChan:      make(chan webrtc.SessionDescription, 1),
+		ArenaCandidateChan:        make(chan webrtc.ICECandidateInit, 1),
 		SendDataChan:              make(chan string, 1000),
 		ControlsReadyChan:         make(chan bool, 1),
 		ID:                        id,
