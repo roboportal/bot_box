@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/roboportal/bot_box/pkg/utils"
 )
 
 const (
@@ -95,7 +94,12 @@ func (comm *ACommunicator) isConnecting() bool {
 
 func (comm *ACommunicator) handleConnection() {
 	defer (func() {
+		comm.mu.Lock()
+		comm.setDisconnected()
+		comm.mu.Unlock()
+
 		time.Sleep(time.Duration(comm.reconnectTimeoutSec) * time.Second)
+
 		go comm.handleConnection()
 	})()
 
@@ -108,6 +112,7 @@ func (comm *ACommunicator) handleConnection() {
 
 	comm.awaitingPong = false
 	comm.setConnecting()
+
 	tickerP.Stop()
 
 	log.Println("Connecting to the platform.")
@@ -116,10 +121,6 @@ func (comm *ACommunicator) handleConnection() {
 
 	if err != nil {
 		log.Println("Connection failed error:", err)
-
-		time.Sleep(time.Duration(comm.reconnectTimeoutSec) * time.Second)
-
-		comm.setDisconnected()
 
 		comm.mu.Unlock()
 
@@ -149,10 +150,6 @@ func (comm *ACommunicator) handleConnection() {
 
 	for {
 		select {
-		case <-comm.doReconnect:
-			go utils.TriggerChannel(comm.stopReceiving)
-			go utils.TriggerChannel(comm.stopSending)
-			return
 
 		case <-tickerP.C:
 			if !comm.isConnected() {
@@ -185,9 +182,6 @@ func (comm *ACommunicator) handleConnection() {
 func (comm *ACommunicator) handleSend() {
 	for {
 		select {
-		case <-comm.stopSending:
-			return
-
 		case msg := <-comm.sendChan:
 			if !comm.isConnected() {
 				continue
@@ -211,9 +205,6 @@ func (comm *ACommunicator) handleSend() {
 func (comm *ACommunicator) handleReceive() {
 	for {
 		select {
-		case <-comm.stopReceiving:
-			return
-
 		default:
 			if !comm.isConnected() {
 				continue
