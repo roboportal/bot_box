@@ -202,6 +202,10 @@ func Init(p InitParams) {
 					case "READY":
 						enableControls(p.SerialWriteChan, p.Id)
 						p.ControlsReadyChan <- true
+
+					case "NOT_READY":
+						haltControls(p.SerialWriteChan, p.Id)
+						p.ControlsReadyChan <- false
 					}
 
 				})
