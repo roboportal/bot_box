@@ -20,7 +20,8 @@ type ASerial struct {
 	receiveChan chan string
 }
 
-func serialFactory(p InitParams) ASerial {
+// Init setups
+func Init(p InitParams) {
 	c := &serial.Config{Name: p.PortName, Baud: p.BaudRate}
 	s, err := serial.OpenPort(c)
 
@@ -29,38 +30,22 @@ func serialFactory(p InitParams) ASerial {
 		panic(err)
 	}
 
-	return ASerial{
-		serial:      s,
-		sendChan:    p.SendChan,
-		receiveChan: p.ReceiveChan,
-	}
-}
-
-func (s *ASerial) handleSend() {
-	for {
-		select {
-		case msg := <-s.sendChan:
-			_, err := s.serial.Write([]byte(msg + "\n"))
-			if err != nil {
-				log.Println("Serial write error:", err)
+	go func() {
+		for {
+			select {
+			case msg := <-p.SendChan:
+				_, err := s.Write([]byte(msg + "\n"))
+				if err != nil {
+					log.Println("Serial write error:", err)
+				}
 			}
 		}
-	}
-}
+	}()
 
-func (s *ASerial) handleReceive() {
-	scanner := bufio.NewScanner(s.serial)
+	scanner := bufio.NewScanner(s)
 
 	for scanner.Scan() {
 		data := scanner.Text()
-		s.receiveChan <- data
+		p.ReceiveChan <- data
 	}
-}
-
-// Init setups
-func Init(p InitParams) {
-	s := serialFactory(p)
-
-	go s.handleReceive()
-	go s.handleSend()
 }

@@ -3,7 +3,6 @@ package communicator
 import (
 	"log"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -29,7 +28,6 @@ type ACommunicator struct {
 	doReconnect         chan struct{}
 	stopSending         chan struct{}
 	stopReceiving       chan struct{}
-	mu                  sync.Mutex
 	conStatChan         chan string
 	awaitingPong        bool
 }
@@ -46,7 +44,7 @@ type InitParams struct {
 	ConStatChan         chan string
 }
 
-func commFactory(p InitParams) ACommunicator {
+func factory(p InitParams) ACommunicator {
 	return ACommunicator{
 		status:              disconnected,
 		platformUri:         p.PlatformUri,
@@ -69,7 +67,6 @@ func (comm *ACommunicator) setConnecting() {
 	log.Println("WS connecting")
 	comm.status = connecting
 	comm.conStatChan <- connecting
-
 }
 
 func (comm *ACommunicator) setConnected() {
@@ -92,28 +89,25 @@ func (comm *ACommunicator) isConnecting() bool {
 	return comm.status == connecting
 }
 
-func (comm *ACommunicator) handleConnection() {
-	defer (func() {
-		comm.mu.Lock()
-		comm.setDisconnected()
-		comm.mu.Unlock()
-
-		time.Sleep(time.Duration(comm.reconnectTimeoutSec) * time.Second)
-
-		go comm.handleConnection()
-	})()
+// Init setups ws connection
+func Init(p InitParams) {
+	comm := factory(p)
 
 	headers := http.Header{"x-public-key": {comm.publicKey}}
 	tickerP := time.NewTicker(time.Duration(comm.pingIntervalSec) * time.Second)
 
-	defer tickerP.Stop()
+	defer (func() {
+		comm.setDisconnected()
+		tickerP.Stop()
+		comm.awaitingPong = false
+		if comm.conn != nil {
+			comm.conn.Close()
+		}
+		time.Sleep(time.Duration(comm.reconnectTimeoutSec) * time.Second)
+		Init(p)
+	})()
 
-	comm.mu.Lock()
-
-	comm.awaitingPong = false
 	comm.setConnecting()
-
-	tickerP.Stop()
 
 	log.Println("Connecting to the platform.")
 
@@ -121,96 +115,30 @@ func (comm *ACommunicator) handleConnection() {
 
 	if err != nil {
 		log.Println("Connection failed error:", err)
-
-		comm.mu.Unlock()
-
 		return
 	}
 
 	comm.conn = c
 
-	defer c.Close()
-
 	c.SetPongHandler(func(d string) error {
-		comm.mu.Lock()
 		comm.awaitingPong = false
-		comm.mu.Unlock()
 		return nil
 	})
 
 	comm.setConnected()
 
-	go comm.handleSend()
-	go comm.handleReceive()
-
-	tickerP.Reset(time.Duration(comm.pingIntervalSec) * time.Second)
-	comm.mu.Unlock()
-
 	log.Println("Connected to the platform.")
 
-	for {
-		select {
+	done := make(chan struct{})
 
-		case <-tickerP.C:
+	go func() {
+		defer close(done)
+		for {
 			if !comm.isConnected() {
 				continue
 			}
 
-			if comm.awaitingPong {
-				return
-			}
-
-			c := comm.conn
-
-			comm.mu.Lock()
-			err := c.WriteControl(websocket.PingMessage, []byte(comm.publicKey), time.Now().Add(time.Duration(comm.sendTimeoutSec)*time.Second))
-
-			comm.awaitingPong = true
-			comm.mu.Unlock()
-
-			if err != nil {
-				log.Println("WS Ping error:", err)
-
-				if !comm.isConnecting() {
-					return
-				}
-			}
-		}
-	}
-}
-
-func (comm *ACommunicator) handleSend() {
-	for {
-		select {
-		case msg := <-comm.sendChan:
-			if !comm.isConnected() {
-				continue
-			}
-
-			c := comm.conn
-			c.SetWriteDeadline(time.Now().Add(time.Duration(comm.sendTimeoutSec) * time.Second))
-
-			comm.mu.Lock()
-			err := c.WriteMessage(websocket.TextMessage, []byte(msg))
-			comm.mu.Unlock()
-
-			if err != nil {
-				log.Println("Send WS data error:", err)
-				return
-			}
-		}
-	}
-}
-
-func (comm *ACommunicator) handleReceive() {
-	for {
-		select {
-		default:
-			if !comm.isConnected() {
-				continue
-			}
-
-			_, message, err := comm.conn.ReadMessage()
+			_, message, err := c.ReadMessage()
 
 			if err != nil {
 				log.Println("WS receiving error", err)
@@ -221,13 +149,51 @@ func (comm *ACommunicator) handleReceive() {
 				comm.receiveChan <- string(message)
 			}
 		}
+	}()
+
+	tickerP.Reset(time.Duration(comm.pingIntervalSec) * time.Second)
+
+	for {
+		select {
+		case <-done:
+			return
+
+		case <-tickerP.C:
+			if !comm.isConnected() {
+				continue
+			}
+
+			if comm.awaitingPong {
+				log.Println("Pong was not received")
+				return
+			}
+
+			c := comm.conn
+
+			err := c.WriteControl(websocket.PingMessage, []byte(comm.publicKey), time.Now().Add(time.Duration(comm.sendTimeoutSec)*time.Second))
+
+			comm.awaitingPong = true
+
+			if err != nil {
+				log.Println("WS Ping error:", err)
+				return
+			}
+
+		case msg := <-comm.sendChan:
+			if !comm.isConnected() {
+				continue
+			}
+
+			c := comm.conn
+			c.SetWriteDeadline(time.Now().Add(time.Duration(comm.sendTimeoutSec) * time.Second))
+
+			err := c.WriteMessage(websocket.TextMessage, []byte(msg))
+
+			if err != nil {
+				log.Println("Send WS data error:", err)
+				return
+			}
+		}
 	}
-}
-
-// Init setups ws connection
-func Init(p InitParams) {
-	comm := commFactory(p)
-
-	go comm.handleConnection()
 
 }

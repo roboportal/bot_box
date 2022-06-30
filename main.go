@@ -80,7 +80,7 @@ func main() {
 		ReceiveChan: _arena.SerialReadChan,
 	}
 
-	serial.Init(serialParams)
+	go serial.Init(serialParams)
 
 	communicatorParams := communicator.InitParams{
 		PlatformUri:         srvURL,
@@ -94,7 +94,7 @@ func main() {
 		ConStatChan:         _arena.WSConStatChan,
 	}
 
-	communicator.Init(communicatorParams)
+	go communicator.Init(communicatorParams)
 
 	go _arena.Run()
 
