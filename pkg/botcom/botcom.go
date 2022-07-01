@@ -102,24 +102,6 @@ func Init(p InitParams) {
 				p.WebRTCConnectionStateChan <- connectionStateString
 			})
 
-			dataChannel, err := peerConnection.CreateDataChannel("controls", nil)
-			if err != nil {
-				log.Println("CreateDataChannel on peerConnection error", err)
-				defer peerConnection.Close()
-				defer haltControls(p.SerialWriteChan, p.Id)
-				return
-			}
-			defer dataChannel.Close()
-			// Register channel opening handling
-			dataChannel.OnOpen(func() {
-				log.Println("Data channel open:", dataChannel.Label(), dataChannel.ID())
-			})
-
-			// Register text message handling
-			dataChannel.OnMessage(func(msg webrtc.DataChannelMessage) {
-
-			})
-
 			peerConnection.OnDataChannel(func(d *webrtc.DataChannel) {
 				log.Println("New DataChannel:", d.Label(), d.ID())
 
