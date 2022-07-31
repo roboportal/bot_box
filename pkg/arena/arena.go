@@ -265,6 +265,41 @@ func (a *AnArena) Run() {
 				continue
 			}
 
+			if data.Action == "IS_BOT_READY_FOR_CONNECTION" {
+				type BotIsReadyForConnecionPayload struct {
+					Token     string `json:"token"`
+					PublicKey string `json:"publicKey"`
+					ID        int    `json:"id"`
+					IsReady   bool   `json:"isReady"`
+				}
+
+				type BotIsReadyForConnecionAction struct {
+					Name    string                        `json:"name"`
+					Payload BotIsReadyForConnecionPayload `json:"payload"`
+				}
+
+				message := BotIsReadyForConnecionAction{
+					Name: "BOT_IS_READY_FOR_CONNECTION",
+					Payload: BotIsReadyForConnecionPayload{
+						Token:     a.TokenString,
+						PublicKey: a.PublicKey,
+						ID:        data.ID,
+						IsReady:   b.Status == bot.Idle,
+					},
+				}
+
+				br, err := json.Marshal(message)
+
+				if err != nil {
+					log.Println("Serialize 'BOT_IS_READY_FOR_CONNECTION' message to RoboPortal error", err)
+					return
+				}
+
+				a.WSWriteChan <- string(br)
+
+				continue
+			}
+
 			if data.Action == "DISCONNECT_BOT" {
 				log.Println("Disconnect bot: ", b.ID)
 				utils.TriggerChannel(b.QuitWebRTCChan)
