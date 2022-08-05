@@ -103,4 +103,4 @@ Visit the ROBOPORTAL YouTube [channel](https://www.youtube.com/channel/UC-CswhfC
 
 # Contacts:
 
-[Join our Discord channel](https://discord.gg/WeAahmwMMv) or reach out over email: info@roboportal.io
+[Join our Discord channel](https://discord.gg/2MmWFapCrp) or reach out over email: info@roboportal.io
