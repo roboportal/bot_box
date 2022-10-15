@@ -195,7 +195,7 @@ func Init(p InitParams) {
 					track.Close()
 				})
 
-				t, err := peerConnection.AddTransceiverFromTrack(track,
+				_, err := peerConnection.AddTransceiverFromTrack(track,
 					webrtc.RtpTransceiverInit{
 						Direction: webrtc.RTPTransceiverDirectionSendonly,
 					},
@@ -204,9 +204,6 @@ func Init(p InitParams) {
 					log.Println("AddTransceiverFromTrack to peerConnection error", err)
 					return
 				}
-
-				defer t.Stop()
-
 			}
 
 			err = peerConnection.SetRemoteDescription(description)
