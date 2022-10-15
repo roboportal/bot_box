@@ -192,7 +192,6 @@ func Init(p InitParams) {
 			for _, track := range p.MediaStream.GetTracks() {
 				track.OnEnded(func(err error) {
 					log.Println("Track ended with error:", track.ID(), err)
-					track.Close()
 				})
 
 				_, err := peerConnection.AddTransceiverFromTrack(track,
