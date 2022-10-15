@@ -307,6 +307,11 @@ func (a *AnArena) Run() {
 				continue
 			}
 
+			if data.Action == "RESTART_ARENA_APP" {
+				log.Println("Restarting arena...")
+				panic("Restart")
+			}
+
 		case serialMsg := <-a.SerialReadChan:
 			r := strings.NewReplacer(" ", "", "\t", "", "\n", "", "\r", "", "\x00", "")
 			sanitizedMsg := r.Replace(serialMsg)
