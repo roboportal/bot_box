@@ -192,7 +192,7 @@ func Init(p InitParams) {
 			for _, track := range p.MediaStream.GetTracks() {
 				track.OnEnded(func(err error) {
 					log.Println("Track ended with error:", track.ID(), err)
-					defer track.Close()
+					track.Close()
 				})
 
 				t, err := peerConnection.AddTransceiverFromTrack(track,
@@ -249,11 +249,7 @@ func Init(p InitParams) {
 
 		case <-p.QuitWebRTCChan:
 			log.Println("Quitting WebRTC for bot:", p.Id)
-			if peerConnection != nil {
-				peerConnection.Close()
-			}
 			go utils.TriggerChannel(closeDataChannelChan)
-			go haltControls(p.SerialWriteChan, p.Id)
 			go Init(p)
 			return
 		}
