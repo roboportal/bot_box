@@ -135,7 +135,7 @@ func Init(p InitParams) {
 		defer close(done)
 		for {
 			if !comm.isConnected() {
-				return
+				continue
 			}
 
 			_, message, err := c.ReadMessage()
@@ -160,7 +160,7 @@ func Init(p InitParams) {
 
 		case <-tickerP.C:
 			if !comm.isConnected() {
-				return
+				continue
 			}
 
 			if comm.awaitingPong {
