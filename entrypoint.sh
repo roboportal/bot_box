@@ -22,4 +22,5 @@ if [ $(check_connection) == '200' ]
     fi
 fi
 
+sleep 1
 /home/pi/bot_box/bot_box
