@@ -107,7 +107,9 @@ func (b *ABot) Run(p RunParams) {
 		return
 	}
 
-	p.WsWriteChan <- string(br)
+	go func() {
+		p.WsWriteChan <- string(br)
+	}()
 
 	botcomParams := botcom.InitParams{
 		Id:                                b.ID,
