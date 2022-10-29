@@ -135,7 +135,7 @@ func Init(p InitParams) {
 		defer close(done)
 		for {
 			if !comm.isConnected() {
-				continue
+				return
 			}
 
 			_, message, err := c.ReadMessage()
@@ -160,7 +160,7 @@ func Init(p InitParams) {
 
 		case <-tickerP.C:
 			if !comm.isConnected() {
-				continue
+				return
 			}
 
 			if comm.awaitingPong {
@@ -181,7 +181,7 @@ func Init(p InitParams) {
 
 		case msg := <-comm.sendChan:
 			if !comm.isConnected() {
-				continue
+				panic("Trying to send data thru closed socket")
 			}
 
 			c := comm.conn
