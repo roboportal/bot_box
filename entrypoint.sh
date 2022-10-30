@@ -12,7 +12,6 @@ if [ $(check_connection) == '200' ]
   else
     echo Dialing LTE
     
-    sudo wvdialconf
     sudo wvdial &
     sleep 10
     if [ $(check_connection) != '200' ]
