@@ -13,7 +13,7 @@ if [ $(check_connection) == '200' ]
     echo Dialing LTE
     
     sudo wvdial &
-    sleep 10
+    sleep 20
     if [ $(check_connection) != '200' ]
       then
         echo Failed to establish connection.
