@@ -18,8 +18,8 @@ type AnArena struct {
 	WSReadChan                     chan string
 	WSWriteChan                    chan string
 	WSConStatChan                  chan string
-	SerialWriteChan                chan string
-	SerialReadChan                 chan string
+	BotCommandsWriteChan           chan string
+	BotCommandsReadChan            chan string
 	DisconnectChan                 chan struct{}
 	TokenString                    string
 	PublicKey                      string
@@ -38,7 +38,6 @@ type InitParams struct {
 	StunUrls    []string
 	TokenString string
 	PublicKey   string
-	NBots       int
 
 	VideoCodecBitRate int
 	FrameFormat       string
@@ -48,12 +47,12 @@ type InitParams struct {
 
 func Factory(p InitParams) AnArena {
 	return AnArena{
-		WSReadChan:      make(chan string, 1000),
-		WSWriteChan:     make(chan string, 1000),
-		WSConStatChan:   make(chan string, 1),
-		SerialWriteChan: make(chan string, 1000),
-		SerialReadChan:  make(chan string, 1000),
-		DisconnectChan:  make(chan struct{}, 1),
+		WSReadChan:           make(chan string, 1000),
+		WSWriteChan:          make(chan string, 1000),
+		WSConStatChan:        make(chan string, 1),
+		BotCommandsWriteChan: make(chan string, 1000),
+		BotCommandsReadChan:  make(chan string, 1000),
+		DisconnectChan:       make(chan struct{}, 1),
 
 		TokenString: p.TokenString,
 		PublicKey:   p.PublicKey,
@@ -64,8 +63,6 @@ func Factory(p InitParams) AnArena {
 		videoWidth:        p.VideoWidth,
 		videoFrameRate:    p.VideoFrameRate,
 
-		botsCount:                      p.NBots,
-		Bots:                           make([]*bot.ABot, p.NBots),
 		areControlsAllowedBySupervisor: true,
 		areBotsReady:                   false,
 	}
@@ -126,6 +123,48 @@ func (a *AnArena) Run() {
 
 	log.Println("Arena: WS connected")
 
+	for {
+		msg := <-a.WSReadChan
+		type aData struct {
+			Action string
+			Data   string
+			ID     int
+		}
+
+		var data aData
+
+		err := json.Unmarshal([]byte(msg), &data)
+
+		if err != nil {
+			log.Println("Parse message from RoboPortal error", err)
+			continue
+		}
+
+		if data.Action == "ARENA_CONFIG" {
+			type aPayload struct {
+				AreControlsAllowed bool
+				NBots              int
+			}
+
+			var payload aPayload
+
+			err := json.Unmarshal([]byte(data.Data), &payload)
+
+			if err != nil {
+				log.Println("Parse 'ARENA_CONFIG' message from RoboPortal error", err)
+				panic("Parse 'ARENA_CONFIG' message from RoboPortal error")
+			}
+
+			a.setAreControlsAllowedBySupervisor(payload.AreControlsAllowed)
+
+			a.botsCount = payload.NBots
+
+			a.Bots = make([]*bot.ABot, payload.NBots)
+
+			break
+		}
+	}
+
 	codecSelector := getCodecSelector(a.videoCodecBitRate)
 
 	mediaEngine := webrtc.MediaEngine{}
@@ -162,8 +201,8 @@ func (a *AnArena) Run() {
 			MediaStream:                       mediaStream,
 			WsWriteChan:                       a.WSWriteChan,
 			WSConStatChan:                     a.WSConStatChan,
-			SerialWriteChan:                   a.SerialWriteChan,
-			SerialReadChan:                    a.SerialReadChan,
+			BotCommandsWriteChan:              a.BotCommandsWriteChan,
+			BotCommandsReadChan:               a.BotCommandsReadChan,
 			GetAreControlsAllowedBySupervisor: a.getAreControlsAllowedBySupervisor,
 			GetAreBotsReady:                   a.getAreBotsReady,
 			SetBotReady:                       a.SetBotReady,
@@ -312,7 +351,7 @@ func (a *AnArena) Run() {
 				panic("Restart")
 			}
 
-		case serialMsg := <-a.SerialReadChan:
+		case serialMsg := <-a.BotCommandsReadChan:
 			r := strings.NewReplacer(" ", "", "\t", "", "\n", "", "\r", "", "\x00", "")
 			sanitizedMsg := r.Replace(serialMsg)
 

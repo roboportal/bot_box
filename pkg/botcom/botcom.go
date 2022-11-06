@@ -27,20 +27,20 @@ type InitParams struct {
 	WebRTCConnectionStateChan         chan string
 	SendDataChan                      chan string
 	QuitWebRTCChan                    chan struct{}
-	SerialWriteChan                   chan string
+	BotCommandsWriteChan              chan string
 	ControlsReadyChan                 chan bool
 	GetAreControlsAllowedBySupervisor func() bool
 	GetAreBotsReady                   func() bool
 }
 
-func haltControls(serialWriteChan chan string, id int) {
+func haltControls(botCommandsWriteChan chan string, id int) {
 	command := fmt.Sprintf("{\"address\":%d,\"controls\":{\"stop\":true}}", id)
-	serialWriteChan <- command
+	botCommandsWriteChan <- command
 }
 
-func enableControls(serialWriteChan chan string, id int) {
+func enableControls(botCommandsWriteChan chan string, id int) {
 	command := fmt.Sprintf("{\"address\":%d,\"controls\":{\"start\":true}}", id)
-	serialWriteChan <- command
+	botCommandsWriteChan <- command
 }
 
 func Init(p InitParams) {
@@ -69,7 +69,7 @@ func Init(p InitParams) {
 			peerConnection, err = p.Api.NewPeerConnection(config)
 
 			defer peerConnection.Close()
-			defer haltControls(p.SerialWriteChan, p.Id)
+			defer haltControls(p.BotCommandsWriteChan, p.Id)
 
 			if err != nil {
 				log.Println("Create peerConnection error", err)
@@ -109,7 +109,19 @@ func Init(p InitParams) {
 				d.OnOpen(func() {
 					log.Println("Data channel open:", d.Label(), d.ID())
 
-					enableControls(p.SerialWriteChan, p.Id)
+					state := p.GetAreControlsAllowedBySupervisor()
+
+					enableControls(p.BotCommandsWriteChan, p.Id)
+
+					status := "DECLINED"
+
+					if state {
+						status = "ALLOWED"
+					}
+
+					command := fmt.Sprintf("{\"type\": \"CONTROLS_SUPERVISOR_STATUS_CHANGE\", \"payload\": {\"status\": \"%s\"}}", status)
+
+					d.SendText(command)
 
 					for {
 						select {
@@ -126,7 +138,7 @@ func Init(p InitParams) {
 						case <-closeDataChannelChan:
 							log.Println("Closing data channel for bot:", p.Id)
 							defer d.Close()
-							defer haltControls(p.SerialWriteChan, p.Id)
+							defer haltControls(p.BotCommandsWriteChan, p.Id)
 							return
 						}
 					}
@@ -175,14 +187,14 @@ func Init(p InitParams) {
 
 						command := fmt.Sprintf("{\"address\":%d,\"controls\":%s}", p.Id, data.Payload)
 
-						p.SerialWriteChan <- command
+						p.BotCommandsWriteChan <- command
 
 					case "READY":
-						enableControls(p.SerialWriteChan, p.Id)
+						enableControls(p.BotCommandsWriteChan, p.Id)
 						p.ControlsReadyChan <- true
 
 					case "NOT_READY":
-						haltControls(p.SerialWriteChan, p.Id)
+						haltControls(p.BotCommandsWriteChan, p.Id)
 						p.ControlsReadyChan <- false
 					}
 

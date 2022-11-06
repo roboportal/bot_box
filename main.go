@@ -9,7 +9,13 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/roboportal/bot_box/pkg/arena"
 	"github.com/roboportal/bot_box/pkg/communicator"
+	"github.com/roboportal/bot_box/pkg/consoleoutput"
 	"github.com/roboportal/bot_box/pkg/serial"
+)
+
+const (
+	Serial  = "serial"
+	Console = "console"
 )
 
 func main() {
@@ -23,16 +29,21 @@ func main() {
 	srvURL := os.Getenv("srv_url")
 	publicKey := os.Getenv("public_key")
 	secretKey := os.Getenv("secret_key")
+
+	outputMode := os.Getenv("output_mode")
 	portName := os.Getenv("port_name")
+
+	if (outputMode != Serial) && (outputMode != Console) {
+		panic("output_mode param has wrong value")
+	}
+
 	stunUrls := strings.SplitAfter(os.Getenv("stun_urls"), ",")
 	baudRate, err := strconv.ParseInt(os.Getenv("baud_rate"), 10, 32)
+
 	if err != nil {
 		panic(err)
 	}
-	nBots, err := strconv.ParseInt(os.Getenv("n_bots"), 10, 32)
-	if err != nil {
-		panic(err)
-	}
+
 	videoCodecBitRate, err := strconv.ParseInt(os.Getenv("video_codec_bit_rate"), 10, 32)
 	if err != nil {
 		panic(err)
@@ -63,7 +74,6 @@ func main() {
 		StunUrls:    stunUrls,
 		TokenString: tokenString,
 		PublicKey:   publicKey,
-		NBots:       int(nBots),
 
 		VideoCodecBitRate: int(videoCodecBitRate),
 		FrameFormat:       frameFormat,
@@ -73,14 +83,24 @@ func main() {
 
 	_arena := arena.Factory(arenaParams)
 
-	serialParams := serial.InitParams{
-		PortName:    portName,
-		BaudRate:    int(baudRate),
-		SendChan:    _arena.SerialWriteChan,
-		ReceiveChan: _arena.SerialReadChan,
+	if outputMode == Serial {
+		serialParams := serial.InitParams{
+			PortName:    portName,
+			BaudRate:    int(baudRate),
+			SendChan:    _arena.BotCommandsWriteChan,
+			ReceiveChan: _arena.BotCommandsReadChan,
+		}
+
+		go serial.Init(serialParams)
 	}
 
-	go serial.Init(serialParams)
+	if outputMode == Console {
+		consoleParams := consoleoutput.InitParams{
+			SendChan: _arena.BotCommandsWriteChan,
+		}
+
+		go consoleoutput.Init(consoleParams)
+	}
 
 	communicatorParams := communicator.InitParams{
 		PlatformUri:         srvURL,

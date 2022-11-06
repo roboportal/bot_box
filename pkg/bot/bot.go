@@ -67,8 +67,8 @@ type RunParams struct {
 	MediaStream                       mediadevices.MediaStream
 	WsWriteChan                       chan string
 	WSConStatChan                     chan string
-	SerialWriteChan                   chan string
-	SerialReadChan                    chan string
+	BotCommandsWriteChan              chan string
+	BotCommandsReadChan               chan string
 	GetAreControlsAllowedBySupervisor func() bool
 	GetAreBotsReady                   func() bool
 	SetBotReady                       func(int)
@@ -123,7 +123,7 @@ func (b *ABot) Run(p RunParams) {
 		WebRTCConnectionStateChan:         b.WebRTCConnectionStateChan,
 		SendDataChan:                      b.SendDataChan,
 		QuitWebRTCChan:                    b.QuitWebRTCChan,
-		SerialWriteChan:                   p.SerialWriteChan,
+		BotCommandsWriteChan:              p.BotCommandsWriteChan,
 		ControlsReadyChan:                 b.ControlsReadyChan,
 		GetAreControlsAllowedBySupervisor: p.GetAreControlsAllowedBySupervisor,
 		GetAreBotsReady:                   p.GetAreBotsReady,

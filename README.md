@@ -63,10 +63,9 @@ The list of params:
 - `video_width` - camera image width
 - `video_frame_rate` - camera frame rate
 
+- `output_mode` - destination for control commands: `console` | `serial`
 - `port_name` - name of the serial port to communicate with robot hardware
 - `baud_rate` - serial port baud rate
-
-- `n_bots` - number of bots controlled by one Bot Box.
 
 # Supervisor setup
 
