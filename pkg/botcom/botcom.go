@@ -68,8 +68,14 @@ func Init(p InitParams) {
 
 			peerConnection, err = p.Api.NewPeerConnection(config)
 
-			defer peerConnection.Close()
-			defer haltControls(p.BotCommandsWriteChan, p.Id)
+			defer func() {
+				if r := recover(); r != nil {
+					fmt.Println("pion panic:", r)
+				}
+
+				peerConnection.Close()
+				haltControls(p.BotCommandsWriteChan, p.Id)
+			}()
 
 			if err != nil {
 				log.Println("Create peerConnection error", err)
