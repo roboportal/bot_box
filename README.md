@@ -27,9 +27,9 @@ sudo apt install git wget
 4. Install golang
 
 ```
-wget https://go.dev/dl/go1.18.3.linux-armv6l.tar.gz
-sudo tar -C /usr/local -xzf go1.18.3.linux-armv6l.tar.gz
-rm go1.18.3.linux-armv6l.tar.gz
+wget https://go.dev/dl/go1.19.4.linux-armv6l.tar.gz
+sudo tar -C /usr/local -xzf go1.19.4.linux-armv6l.tar.gz
+rm go1.19.4.linux-armv6l.tar.gz
 ```
 
 5. And configure it:
