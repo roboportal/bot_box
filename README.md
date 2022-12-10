@@ -21,7 +21,7 @@ It enables peer-to-peer controls and video streaming between robots and web-base
 
 ```
 sudo apt update
-sudo apt install git wget
+sudo apt install git wget libatomic-ops-dev
 ```
 
 4. Install golang
@@ -46,7 +46,7 @@ rm go1.19.4.linux-armv6l.tar.gz
    `git clone git@github.com:roboportal/bot_box.git`
 
 7. Navigate to the repo: `cd ./bot_box`
-8. And compile the BotBox: `go build -tags=arm` for raspberry or `go build` for mac.
+8. And compile the BotBox: `CGO_LDFLAGS="-latomic" go build -tags=arm` for raspberry or `go build` for mac.
 9. Create `.env` file for the configuration [following the instructions](#botbox-configuration).
 10. Run the bot by executing: `./bot_box`
 
