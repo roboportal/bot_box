@@ -96,6 +96,67 @@ stopasgroup=true
 
 6. To start the bot box run `supervisorctl start bot-box`. There are some handy commands: `supervisorctl stop bot-box`, `supervisorctl restart bot-box`, `supervisorctl tail bot-box stdout`.
 
+# Messages format
+
+`bot_box` communicates with robot via JSON serialized messages.
+
+## Robot controls formats
+
+Typical control message has the format: `{"address": a, "controls": m}`.
+
+### Address
+
+In such message address 'a' is an integer number: 0 or 1. 0 is a default value, 1 is applicable to the second control in a 'Fight Mode'. When 'Fight Mode' is disabled address could be ignored by the robot hardware.
+
+### Controls
+
+Controls message 'm' contains a payload of commands for robot hardware to execute.
+
+For example:
+
+- Enable controls - `{"address":0,"controls":{"start":true}}` - this message will be sent to robot after 'Controls' are enabled in RoboPortal UI.
+
+- Disable controls - `{"address":0,"controls":{"stop":true}}` - this message will be sent to robot after 'Controls' are disabled in UI or interrupted p2p connection.
+
+- Control command - `{"address":0,"controls":{"l":0,"r":0,"f":100,"b":0}}` -
+  such payload is defined by 'Controls Setup' in RoboPortal application by setting key-value pairs. The message above is used in 'Scout' robot example. It represents 'Move Forward' command.
+
+## Telemetry
+
+Robot could send it's location and battery data to be presented to user as widgets using following format:
+
+```
+{
+  "id": 0,
+  "lat": 49.2766275048836,
+  "lng": -123.13133235249737,
+  "headingAngle": 90,
+  "battery": {
+    "min": 18,
+    "max": 25.2,
+    "value": 24,
+    "uom": "V",
+    "charging": False
+  }
+}
+```
+
+`id` - id of the robot, check 'Controls' section
+
+GPS:
+
+`lat` - latitude
+`lng` - longitude
+`headingAngle` - magnetic compass angle
+
+Battery (as `battery` object):
+
+`min` - minimum possible value
+`max` - maximum possible value
+`value` - current value (charge, voltage)
+`uom` - unit of measure for value (V, % etc)
+`charging` - is charging or not
+
 # Video Tutorials
 
 Visit the ROBOPORTAL YouTube [channel](https://www.youtube.com/channel/UC-CswhfCJ-i4M9BcoTOE9oA) for the tutorials.
