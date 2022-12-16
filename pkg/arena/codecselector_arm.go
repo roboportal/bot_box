@@ -16,7 +16,6 @@ func getCodecSelector(bitRate int) *mediadevices.CodecSelector {
 		panic(err)
 	}
 
-	mmalParams.Preset = mmal.PresetMedium
 	mmalParams.BitRate = bitRate
 
 	opusParams, err := opus.NewParams()
