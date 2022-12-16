@@ -43,7 +43,7 @@ rm go1.19.4.linux-armv6l.tar.gz
    - apply your changes: `source ~/.profile`
    - check the installation: `go version`
 6. Clone this repository to your Raspberry:
-   `git clone git@github.com:roboportal/bot_box.git`
+   `git clone https://github.com/roboportal/bot_box.git`
 
 7. Navigate to the repo: `cd ./bot_box`
 8. And compile the BotBox: `CGO_LDFLAGS="-latomic" go build -tags=arm` for raspberry or `go build` for mac.
