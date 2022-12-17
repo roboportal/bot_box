@@ -1,3 +1,4 @@
+//go:build !arm
 // +build !arm
 
 package arena
@@ -6,6 +7,8 @@ import (
 	"github.com/pion/mediadevices"
 	"github.com/pion/mediadevices/pkg/codec/opus"
 	"github.com/pion/mediadevices/pkg/codec/x264"
+
+	_ "github.com/pion/mediadevices/pkg/driver/camera"
 )
 
 func getCodecSelector(bitRate int) *mediadevices.CodecSelector {

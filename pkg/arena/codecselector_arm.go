@@ -7,6 +7,8 @@ import (
 	"github.com/pion/mediadevices"
 	"github.com/pion/mediadevices/pkg/codec/mmal"
 	"github.com/pion/mediadevices/pkg/codec/opus"
+
+	_ "github.com/pion/mediadevices/pkg/driver/camera"
 )
 
 func getCodecSelector(bitRate int) *mediadevices.CodecSelector {
