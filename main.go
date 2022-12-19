@@ -45,21 +45,30 @@ func main() {
 	}
 
 	videoCodecBitRate, err := strconv.ParseInt(os.Getenv("video_codec_bit_rate"), 10, 32)
+
 	if err != nil {
 		panic(err)
 	}
+
 	frameFormat := os.Getenv("frame_format")
 
 	videoWidth, err := strconv.ParseInt(os.Getenv("video_width"), 10, 32)
 	if err != nil {
 		panic(err)
 	}
+
 	videoFrameRate, err := strconv.ParseInt(os.Getenv("video_frame_rate"), 10, 32)
 
 	if err != nil {
 		panic(err)
 	}
 
+	isAudioInputEnabled, err := strconv.ParseBool(os.Getenv("audio_input_enabled"))
+
+	if err != nil {
+		panic(err)
+	}
+	
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"publicKey": publicKey,
 	})
@@ -79,6 +88,8 @@ func main() {
 		FrameFormat:       frameFormat,
 		VideoWidth:        int(videoWidth),
 		VideoFrameRate:    int(videoFrameRate),
+
+		IsAudioInputEnabled: isAudioInputEnabled,
 	}
 
 	_arena := arena.Factory(arenaParams)

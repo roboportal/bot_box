@@ -32,6 +32,7 @@ type AnArena struct {
 	videoWidth                     int
 	videoFrameRate                 int
 	areBotsReady                   bool
+	isAudioInputEnabled 					 bool
 }
 
 type InitParams struct {
@@ -43,6 +44,8 @@ type InitParams struct {
 	FrameFormat       string
 	VideoWidth        int
 	VideoFrameRate    int
+
+	IsAudioInputEnabled 					 bool
 }
 
 func Factory(p InitParams) AnArena {
@@ -63,6 +66,7 @@ func Factory(p InitParams) AnArena {
 		videoWidth:        p.VideoWidth,
 		videoFrameRate:    p.VideoFrameRate,
 
+		isAudioInputEnabled: p.IsAudioInputEnabled,
 		areControlsAllowedBySupervisor: true,
 		areBotsReady:                   false,
 	}
@@ -172,6 +176,12 @@ func (a *AnArena) Run() {
 
 	settingEngine := webrtc.SettingEngine{}
 
+	audioConstraints :=  func(c *mediadevices.MediaTrackConstraints) {}
+
+	if !a.isAudioInputEnabled {
+		audioConstraints = nil
+	}
+	
 	mediaStream, err := mediadevices.GetUserMedia(mediadevices.MediaStreamConstraints{
 		Video: func(c *mediadevices.MediaTrackConstraints) {
 			c.FrameFormat = prop.FrameFormat(a.frameFormat)
@@ -179,6 +189,7 @@ func (a *AnArena) Run() {
 			c.FrameRate = prop.Float(a.videoFrameRate)
 
 		},
+		Audio: audioConstraints,
 		Codec: codecSelector,
 	})
 

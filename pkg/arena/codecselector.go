@@ -8,6 +8,7 @@ import (
 	"github.com/pion/mediadevices/pkg/codec/opus"
 	"github.com/pion/mediadevices/pkg/codec/x264"
 
+	_ "github.com/pion/mediadevices/pkg/driver/microphone"
 	_ "github.com/pion/mediadevices/pkg/driver/camera"
 )
 

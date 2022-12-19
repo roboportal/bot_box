@@ -5,9 +5,9 @@ It enables peer-to-peer controls and video streaming between robots and web-base
 
 # Features
 
-- real time video streaming
+- real time video and audio streaming
 - keyboard and gamepad controls streaming with data channel
-- telemetry streaming to the platform. Position on map and battery voltage is supported
+- telemetry streaming to the platform. Position on map and battery voltage are supported
 
 # How it works
 
@@ -62,6 +62,7 @@ The list of params:
 - `frame_format` - camera image format
 - `video_width` - camera image width
 - `video_frame_rate` - camera frame rate
+- `audio_input_enabled` - enable audio streaming to roboportal
 
 - `output_mode` - destination for control commands: `console` | `serial`
 - `port_name` - name of the serial port to communicate with robot hardware
