@@ -7,11 +7,12 @@ import (
 	"strings"
 
 	"github.com/pion/mediadevices"
-
 	"github.com/pion/mediadevices/pkg/prop"
 	"github.com/pion/webrtc/v3"
+
 	"github.com/roboportal/bot_box/pkg/bot"
 	"github.com/roboportal/bot_box/pkg/utils"
+	"github.com/roboportal/bot_box/pkg/gst"
 )
 
 type AnArena struct {
@@ -197,6 +198,8 @@ func (a *AnArena) Run() {
 		log.Println("GetUserMedia error", err)
 		panic(err)
 	}
+
+	go gst.StartMainLoop()
 
 	api := webrtc.NewAPI(webrtc.WithMediaEngine(&mediaEngine), webrtc.WithSettingEngine(settingEngine))
 

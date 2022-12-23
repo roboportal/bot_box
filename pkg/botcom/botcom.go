@@ -5,14 +5,19 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"time"
+	"strings"
 
+
+	"github.com/pion/rtcp"
 	"github.com/pion/mediadevices"
-	"github.com/roboportal/bot_box/pkg/utils"
-
 	"github.com/pion/webrtc/v3"
 
 	_ "github.com/pion/mediadevices/pkg/driver/camera"
 	_ "github.com/pion/mediadevices/pkg/driver/microphone"
+
+	"github.com/roboportal/bot_box/pkg/utils"
+	"github.com/roboportal/bot_box/pkg/gst"
 )
 
 type InitParams struct {
@@ -44,7 +49,7 @@ func enableControls(botCommandsWriteChan chan string, id int) {
 }
 
 func Init(p InitParams) {
-
+	
 	config := webrtc.Configuration{
 		ICEServers: []webrtc.ICEServer{
 			{
@@ -79,6 +84,33 @@ func Init(p InitParams) {
 			}
 
 			p.ControlsReadyChan <- false
+
+			peerConnection.OnTrack(func(track *webrtc.TrackRemote, receiver *webrtc.RTPReceiver) {
+				go func() {
+					ticker := time.NewTicker(time.Second * 3)
+					for range ticker.C {
+						rtcpSendErr := peerConnection.WriteRTCP([]rtcp.Packet{&rtcp.PictureLossIndication{MediaSSRC: uint32(track.SSRC())}})
+						if rtcpSendErr != nil {
+							fmt.Println(rtcpSendErr)
+						}
+					}
+				}()
+		
+				codecName := strings.Split(track.Codec().RTPCodecCapability.MimeType, "/")[1]
+				fmt.Printf("Track has started, of type %d: %s \n", track.PayloadType(), codecName)
+				pipeline := gst.CreatePipeline(track.PayloadType(), strings.ToLower(codecName))
+				pipeline.Start()
+				defer pipeline.Stop()
+				buf := make([]byte, 1400)
+				for {
+					i, _, readErr := track.Read(buf)
+					if readErr != nil {
+						panic(err)
+					}
+		
+					pipeline.Push(buf[:i])
+				}
+			})
 
 			peerConnection.OnICECandidate(func(c *webrtc.ICECandidate) {
 				log.Println("OnICECandidate bot:", p.Id, c)

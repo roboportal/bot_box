@@ -8,6 +8,7 @@ require (
 	github.com/joho/godotenv v1.4.0
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/pion/mediadevices v0.3.12
+	github.com/pion/rtcp v1.2.10 // indirect
 	github.com/pion/transport v0.14.1 // indirect
 	github.com/pion/turn/v2 v2.0.9 // indirect
 	github.com/pion/webrtc/v3 v3.1.49
