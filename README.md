@@ -63,6 +63,7 @@ The list of params:
 - `video_width` - camera image width
 - `video_frame_rate` - camera frame rate
 - `audio_input_enabled` - enable audio streaming to roboportal
+- `audio_output_enabled` - enable audio streaming form roboportal
 
 - `output_mode` - destination for control commands: `console` | `serial`
 - `port_name` - name of the serial port to communicate with robot hardware
