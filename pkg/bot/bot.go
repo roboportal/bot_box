@@ -73,7 +73,9 @@ type RunParams struct {
 	GetAreBotsReady                   func() bool
 	SetBotReady                       func(int)
 	SetBotNotReady                    func(int)
+	IsAudioOutputEnabled              bool
 }
+
 type CreateConnectionPayload struct {
 	Token     string `json:"token"`
 	PublicKey string `json:"publicKey"`
@@ -127,6 +129,7 @@ func (b *ABot) Run(p RunParams) {
 		ControlsReadyChan:                 b.ControlsReadyChan,
 		GetAreControlsAllowedBySupervisor: p.GetAreControlsAllowedBySupervisor,
 		GetAreBotsReady:                   p.GetAreBotsReady,
+		IsAudioOutputEnabled:              p.IsAudioOutputEnabled,
 	}
 
 	go botcom.Init(botcomParams)
