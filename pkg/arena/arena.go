@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/pion/mediadevices"
-
 	"github.com/pion/mediadevices/pkg/prop"
 	"github.com/pion/webrtc/v3"
+
 	"github.com/roboportal/bot_box/pkg/bot"
 	"github.com/roboportal/bot_box/pkg/utils"
 )
@@ -32,7 +32,8 @@ type AnArena struct {
 	videoWidth                     int
 	videoFrameRate                 int
 	areBotsReady                   bool
-	isAudioInputEnabled 					 bool
+	isAudioInputEnabled            bool
+	isAudioOutputEnabled           bool
 }
 
 type InitParams struct {
@@ -45,7 +46,8 @@ type InitParams struct {
 	VideoWidth        int
 	VideoFrameRate    int
 
-	IsAudioInputEnabled 					 bool
+	IsAudioInputEnabled  bool
+	IsAudioOutputEnabled bool
 }
 
 func Factory(p InitParams) AnArena {
@@ -66,7 +68,8 @@ func Factory(p InitParams) AnArena {
 		videoWidth:        p.VideoWidth,
 		videoFrameRate:    p.VideoFrameRate,
 
-		isAudioInputEnabled: p.IsAudioInputEnabled,
+		isAudioInputEnabled:            p.IsAudioInputEnabled,
+		isAudioOutputEnabled:           p.IsAudioOutputEnabled,
 		areControlsAllowedBySupervisor: true,
 		areBotsReady:                   false,
 	}
@@ -176,12 +179,14 @@ func (a *AnArena) Run() {
 
 	settingEngine := webrtc.SettingEngine{}
 
-	audioConstraints :=  func(c *mediadevices.MediaTrackConstraints) {}
+	audioConstraints := func(c *mediadevices.MediaTrackConstraints) {
+		c.ChannelCount = prop.Int(1)
+	}
 
 	if !a.isAudioInputEnabled {
 		audioConstraints = nil
 	}
-	
+
 	mediaStream, err := mediadevices.GetUserMedia(mediadevices.MediaStreamConstraints{
 		Video: func(c *mediadevices.MediaTrackConstraints) {
 			c.FrameFormat = prop.FrameFormat(a.frameFormat)
@@ -218,6 +223,7 @@ func (a *AnArena) Run() {
 			GetAreBotsReady:                   a.getAreBotsReady,
 			SetBotReady:                       a.SetBotReady,
 			SetBotNotReady:                    a.SetBotNotReady,
+			IsAudioOutputEnabled:              a.isAudioOutputEnabled,
 		}
 		go b.Run(botParams)
 	}

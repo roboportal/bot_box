@@ -21,7 +21,7 @@ It enables peer-to-peer controls and video streaming between robots and web-base
 
 ```
 sudo apt update
-sudo apt install git wget libatomic-ops-dev
+sudo apt install git wget libatomic-ops-dev pkg-config libopus-dev libopusfile-dev libasound2-dev
 ```
 
 4. Install golang

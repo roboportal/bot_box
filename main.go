@@ -7,6 +7,7 @@ import (
 
 	jwt "github.com/golang-jwt/jwt"
 	"github.com/joho/godotenv"
+
 	"github.com/roboportal/bot_box/pkg/arena"
 	"github.com/roboportal/bot_box/pkg/communicator"
 	"github.com/roboportal/bot_box/pkg/consoleoutput"
@@ -68,7 +69,13 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	
+
+	isAudioOutputEnabled, err := strconv.ParseBool(os.Getenv("audio_output_enabled"))
+
+	if err != nil {
+		panic(err)
+	}
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"publicKey": publicKey,
 	})
@@ -89,7 +96,8 @@ func main() {
 		VideoWidth:        int(videoWidth),
 		VideoFrameRate:    int(videoFrameRate),
 
-		IsAudioInputEnabled: isAudioInputEnabled,
+		IsAudioInputEnabled:  isAudioInputEnabled,
+		IsAudioOutputEnabled: isAudioOutputEnabled,
 	}
 
 	_arena := arena.Factory(arenaParams)

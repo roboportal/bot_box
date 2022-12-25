@@ -3,17 +3,78 @@ package botcom
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"sync"
+	"time"
 
+	"github.com/faiface/beep"
+	"github.com/faiface/beep/speaker"
 	"github.com/pion/mediadevices"
-	"github.com/roboportal/bot_box/pkg/utils"
-
-	"github.com/pion/webrtc/v3"
-
 	_ "github.com/pion/mediadevices/pkg/driver/camera"
 	_ "github.com/pion/mediadevices/pkg/driver/microphone"
+	"github.com/pion/rtcp"
+	"github.com/pion/webrtc/v3"
+	"github.com/roboportal/bot_box/pkg/utils"
+	"gopkg.in/hraban/opus.v2"
 )
+
+func Sound(track *webrtc.TrackRemote) beep.Streamer {
+	decoder, err := opus.NewDecoder(48000, 1)
+
+	if err != nil {
+		log.Println("opus.NewDecoder error", err)
+	}
+
+	tmp := make([]float32, 8192)
+
+	tmpCount := 0
+
+	return beep.StreamerFunc(func(samples [][2]float64) (n int, ok bool) {
+
+		if tmpCount < len(samples) {
+			data, _, err := track.ReadRTP()
+
+			if data == nil {
+				return 0, false
+			}
+
+			if err == io.EOF {
+				return 0, false
+			}
+
+			if err != nil {
+				log.Println("Stream fn error", err)
+				return 0, false
+			}
+
+			pcm := make([]float32, 8192)
+
+			n, err = decoder.DecodeFloat32(data.Payload, pcm)
+
+			if err != nil {
+				log.Println("Decode error", err)
+			}
+
+			tmp = append(tmp, pcm...)
+			tmpCount += n
+		}
+
+		for i := range samples {
+			samples[i][0] = float64(tmp[i])
+			samples[i][1] = float64(tmp[i])
+		}
+
+		tmp = tmp[len(samples):tmpCount]
+		tmpCount -= len(samples)
+
+		if tmpCount < 0 {
+			tmpCount = 0
+		}
+
+		return len(samples), true
+	})
+}
 
 type InitParams struct {
 	Id                                int
@@ -31,6 +92,7 @@ type InitParams struct {
 	ControlsReadyChan                 chan bool
 	GetAreControlsAllowedBySupervisor func() bool
 	GetAreBotsReady                   func() bool
+	IsAudioOutputEnabled              bool
 }
 
 func haltControls(botCommandsWriteChan chan string, id int) {
@@ -60,6 +122,10 @@ func Init(p InitParams) {
 
 	closeDataChannelChan := make(chan struct{})
 
+	doneAudioTrack := make(chan bool)
+
+	defer close(doneAudioTrack)
+
 	for {
 		select {
 
@@ -79,6 +145,41 @@ func Init(p InitParams) {
 			}
 
 			p.ControlsReadyChan <- false
+
+			peerConnection.OnTrack(func(track *webrtc.TrackRemote, receiver *webrtc.RTPReceiver) {
+				if !p.IsAudioOutputEnabled {
+					return
+				}
+
+				done := make(chan bool)
+
+				defer close(done)
+
+				go func() {
+					ticker := time.NewTicker(time.Second * 3)
+					for range ticker.C {
+						select {
+
+						case <-done:
+							break
+
+						default:
+							err := peerConnection.WriteRTCP([]rtcp.Packet{&rtcp.PictureLossIndication{MediaSSRC: uint32(track.SSRC())}})
+							if err != nil {
+								log.Println("peerConnection.WriteRTCP error", err)
+							}
+						}
+
+					}
+				}()
+
+				sr := beep.SampleRate(48000)
+
+				speaker.Init(sr, sr.N(time.Second/5))
+				speaker.Play(Sound(track))
+
+				<-doneAudioTrack
+			})
 
 			peerConnection.OnICECandidate(func(c *webrtc.ICECandidate) {
 				log.Println("OnICECandidate bot:", p.Id, c)
@@ -210,7 +311,7 @@ func Init(p InitParams) {
 
 				_, err := peerConnection.AddTransceiverFromTrack(track,
 					webrtc.RtpTransceiverInit{
-						Direction: webrtc.RTPTransceiverDirectionSendonly,
+						Direction: webrtc.RTPTransceiverDirectionSendrecv.Revers(),
 					},
 				)
 				if err != nil {
