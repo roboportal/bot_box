@@ -1,11 +1,11 @@
 # Bot Box
 
 Bot Box is a client application for https://roboportal.io.
-It enables peer-to-peer controls and video streaming between robots and web-based control panels. In other words, if you are building the robot and planning to add remote-control functionality and real-time video streaming, it is worth considering using this service.
+It enables peer-to-peer controls, video and audio streaming between robots and web-based control panels. In other words, if you are building the robot and planning to add remote-control functionality and real-time video/audio streaming, it is worth considering using this service.
 
 # Features
 
-- real time video and audio streaming
+- real time video and bidirectional audio streaming
 - keyboard and gamepad controls streaming with data channel
 - telemetry streaming to the platform. Position on map and battery voltage are supported
 
