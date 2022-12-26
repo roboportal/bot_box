@@ -8,6 +8,7 @@ It enables peer-to-peer controls, video and audio streaming between robots and w
 - real time video and bidirectional audio streaming
 - keyboard and gamepad controls streaming with data channel
 - telemetry streaming to the platform. Position on map and battery voltage are supported
+- connect robot via UART or ZeroMQ
 
 # How it works
 
@@ -64,10 +65,12 @@ The list of params:
 - `video_frame_rate` - camera frame rate
 - `audio_input_enabled` - enable audio streaming to roboportal
 - `audio_output_enabled` - enable audio streaming form roboportal
-
 - `output_mode` - destination for control commands: `console` | `serial` | `ipc`
 - `port_name` - name of the serial port to communicate with robot hardware
 - `baud_rate` - serial port baud rate
+- `bot_box_ipc_port` - BotBox ipc port
+- `robot_ipc_port` - robot ipc port
+- `robot_ipc_host` - robot ipc host name
 
 # Supervisor setup
 
