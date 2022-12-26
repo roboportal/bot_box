@@ -15,6 +15,7 @@ require (
 	github.com/pion/webrtc/v3 v3.1.49
 	github.com/rogpeppe/go-internal v1.8.1 // indirect
 	github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07
+	github.com/zeromq/goczmq v4.1.0+incompatible
 	golang.org/x/crypto v0.4.0 // indirect
 	golang.org/x/image v0.2.0 // indirect
 	golang.org/x/net v0.4.0 // indirect

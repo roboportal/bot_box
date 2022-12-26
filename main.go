@@ -11,12 +11,14 @@ import (
 	"github.com/roboportal/bot_box/pkg/arena"
 	"github.com/roboportal/bot_box/pkg/communicator"
 	"github.com/roboportal/bot_box/pkg/consoleoutput"
+	"github.com/roboportal/bot_box/pkg/ipc"
 	"github.com/roboportal/bot_box/pkg/serial"
 )
 
 const (
 	Serial  = "serial"
 	Console = "console"
+	IPC     = "ipc"
 )
 
 func main() {
@@ -34,7 +36,7 @@ func main() {
 	outputMode := os.Getenv("output_mode")
 	portName := os.Getenv("port_name")
 
-	if (outputMode != Serial) && (outputMode != Console) {
+	if outputMode != Serial && outputMode != IPC && outputMode != Console {
 		panic("output_mode param has wrong value")
 	}
 
@@ -76,6 +78,20 @@ func main() {
 		panic(err)
 	}
 
+	botBoxIPCPort, err := strconv.ParseInt(os.Getenv("bot_box_ipc_port"), 10, 32)
+
+	if err != nil {
+		panic(err)
+	}
+
+	robotIPCPort, err := strconv.ParseInt(os.Getenv("robot_ipc_port"), 10, 32)
+
+	if err != nil {
+		panic(err)
+	}
+
+	robotIPCHost := os.Getenv("robot_ipc_host")
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"publicKey": publicKey,
 	})
@@ -111,6 +127,19 @@ func main() {
 		}
 
 		go serial.Init(serialParams)
+	}
+
+	if outputMode == IPC {
+		ipcParams := ipc.InitParams{
+			BotBoxIPCPort: int(botBoxIPCPort),
+			RobotIPCPort:  int(robotIPCPort),
+			RobotIPCHost:  robotIPCHost,
+
+			SendChan:    _arena.BotCommandsWriteChan,
+			ReceiveChan: _arena.BotCommandsReadChan,
+		}
+
+		go ipc.Init(ipcParams)
 	}
 
 	if outputMode == Console {
