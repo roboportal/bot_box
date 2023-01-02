@@ -162,6 +162,11 @@ Battery (as `battery` object):
 `uom` - unit of measure for value (V, % etc)
 `charging` - is charging or not
 
+# Media devices troubleshooting 
+
+- To enable Raspberry Pi Camera Module support on Raspbian Bullseye `Legacy Camera Mode` should be enabled with `raspi-config`.
+- [How to use USB audio devices with Raspberry Pi.](https://www.raspberrypi-spy.co.uk/2019/06/using-a-usb-audio-device-with-the-raspberry-pi/)
+
 # Video Tutorials
 
 Visit the ROBOPORTAL YouTube [channel](https://www.youtube.com/channel/UC-CswhfCJ-i4M9BcoTOE9oA) for the tutorials.
