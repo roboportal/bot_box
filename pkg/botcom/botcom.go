@@ -151,17 +151,14 @@ func Init(p InitParams) {
 					return
 				}
 
-				done := make(chan bool)
-
-				defer close(done)
-
 				go func() {
 					ticker := time.NewTicker(time.Second * 3)
+					defer ticker.Stop()
 					for range ticker.C {
 						select {
 
-						case <-done:
-							break
+						case <-doneAudioTrack:
+							return
 
 						default:
 							err := peerConnection.WriteRTCP([]rtcp.Packet{&rtcp.PictureLossIndication{MediaSSRC: uint32(track.SSRC())}})
@@ -177,6 +174,9 @@ func Init(p InitParams) {
 
 				speaker.Init(sr, sr.N(time.Second/5))
 				speaker.Play(Sound(track))
+
+				defer speaker.Clear()
+				defer speaker.Close()
 
 				<-doneAudioTrack
 			})
