@@ -6,7 +6,6 @@ package arena
 import (
 	"github.com/pion/mediadevices"
 	"github.com/pion/mediadevices/pkg/codec/opus"
-
 	"github.com/pion/mediadevices/pkg/codec/vpx"
 
 	_ "github.com/pion/mediadevices/pkg/driver/camera"
@@ -20,7 +19,6 @@ func getCodecSelector(bitRate int) *mediadevices.CodecSelector {
 		panic(err)
 	}
 
-	// vpxParams.BaseParams = x264.PresetMedium
 	vpxParams.BitRate = bitRate
 
 	opusParams, err := opus.NewParams()
