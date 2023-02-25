@@ -22,7 +22,7 @@ It enables peer-to-peer controls, video and audio streaming between robots and w
 
 ```
 sudo apt update
-sudo apt install git wget libatomic-ops-dev pkg-config libopus-dev libopusfile-dev libasound2-dev libsodium-dev libzmq3-dev libczmq-dev
+sudo apt install git wget libatomic-ops-dev pkg-config libvpx-dev libopus-dev libopusfile-dev libasound2-dev libsodium-dev libzmq3-dev libczmq-dev
 ```
 
 4. Install golang
