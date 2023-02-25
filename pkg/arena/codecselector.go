@@ -6,21 +6,22 @@ package arena
 import (
 	"github.com/pion/mediadevices"
 	"github.com/pion/mediadevices/pkg/codec/opus"
-	"github.com/pion/mediadevices/pkg/codec/x264"
 
-	_ "github.com/pion/mediadevices/pkg/driver/microphone"
+	"github.com/pion/mediadevices/pkg/codec/vpx"
+
 	_ "github.com/pion/mediadevices/pkg/driver/camera"
+	_ "github.com/pion/mediadevices/pkg/driver/microphone"
 )
 
 func getCodecSelector(bitRate int) *mediadevices.CodecSelector {
-	x264Params, err := x264.NewParams()
+	vpxParams, err := vpx.NewVP8Params()
 
 	if err != nil {
 		panic(err)
 	}
 
-	x264Params.Preset = x264.PresetMedium
-	x264Params.BitRate = bitRate
+	// vpxParams.BaseParams = x264.PresetMedium
+	vpxParams.BitRate = bitRate
 
 	opusParams, err := opus.NewParams()
 
@@ -29,7 +30,7 @@ func getCodecSelector(bitRate int) *mediadevices.CodecSelector {
 	}
 
 	codecSelector := mediadevices.NewCodecSelector(
-		mediadevices.WithVideoEncoders(&x264Params),
+		mediadevices.WithVideoEncoders(&vpxParams),
 		mediadevices.WithAudioEncoders(&opusParams),
 	)
 
