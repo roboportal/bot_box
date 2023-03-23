@@ -109,7 +109,6 @@ func Init(p InitParams) {
 				}
 
 				if message != nil {
-					log.Println(string(message))
 					p.ReceiveChan <- string(message)
 				}
 			}
@@ -124,7 +123,6 @@ func Init(p InitParams) {
 		case <-done:
 			return
 		case <-tickerPong.C:
-			log.Println("tickerPong.C")
 			nicelyClose(done)
 			return
 
