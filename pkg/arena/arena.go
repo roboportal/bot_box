@@ -147,6 +147,11 @@ func (a *AnArena) Run() {
 			continue
 		}
 
+		if data.Action == "RESTART_ARENA_APP" {
+			log.Println("Restarting arena...")
+			panic("Restart")
+		}
+
 		if data.Action == "ARENA_CONFIG" {
 			type aPayload struct {
 				AreControlsAllowed bool
@@ -244,6 +249,11 @@ func (a *AnArena) Run() {
 			if err != nil {
 				log.Println("Parse message from RoboPortal error", err)
 				continue
+			}
+
+			if data.Action == "RESTART_ARENA_APP" {
+				log.Println("Restarting arena...")
+				panic("Restart")
 			}
 
 			if data.Action == "DISCONNECT_ALL" {
@@ -361,11 +371,6 @@ func (a *AnArena) Run() {
 				utils.TriggerChannel(b.QuitWebRTCChan)
 
 				continue
-			}
-
-			if data.Action == "RESTART_ARENA_APP" {
-				log.Println("Restarting arena...")
-				panic("Restart")
 			}
 
 		case serialMsg := <-a.BotCommandsReadChan:

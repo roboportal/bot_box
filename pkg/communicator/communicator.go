@@ -3,8 +3,8 @@ package communicator
 import (
 	"log"
 	"net/http"
+	"context"
 	"time"
-
 	"github.com/gorilla/websocket"
 )
 
@@ -13,24 +13,6 @@ const (
 	connected    = "connected"
 	connecting   = "connecting"
 )
-
-type ACommunicator struct {
-	status              string
-	platformUri         string
-	receiveChan         chan string
-	sendChan            chan string
-	reconnectTimeoutSec int
-	pingIntervalSec     int
-	sendTimeoutSec      int
-	tokenString         string
-	publicKey           string
-	conn                *websocket.Conn
-	doReconnect         chan struct{}
-	stopSending         chan struct{}
-	stopReceiving       chan struct{}
-	conStatChan         chan string
-	awaitingPong        bool
-}
 
 type InitParams struct {
 	PlatformUri         string
@@ -44,156 +26,132 @@ type InitParams struct {
 	ConStatChan         chan string
 }
 
-func factory(p InitParams) ACommunicator {
-	return ACommunicator{
-		status:              disconnected,
-		platformUri:         p.PlatformUri,
-		receiveChan:         p.ReceiveChan,
-		sendChan:            p.SendChan,
-		reconnectTimeoutSec: p.ReconnectTimeoutSec,
-		pingIntervalSec:     p.PingIntervalSec,
-		sendTimeoutSec:      p.SendTimeoutSec,
-		tokenString:         p.TokenString,
-		publicKey:           p.PublicKey,
-		doReconnect:         make(chan struct{}),
-		stopSending:         make(chan struct{}),
-		stopReceiving:       make(chan struct{}),
-		conStatChan:         p.ConStatChan,
-		awaitingPong:        false,
+func nicelyClose(ch chan bool) {
+	select {
+	case <-ch:
+		return
+	default:
 	}
-}
-
-func (comm *ACommunicator) setConnecting() {
-	log.Println("WS connecting")
-	comm.status = connecting
-	comm.conStatChan <- connecting
-}
-
-func (comm *ACommunicator) setConnected() {
-	log.Println("WS connected")
-	comm.status = connected
-	comm.conStatChan <- connected
-}
-
-func (comm *ACommunicator) setDisconnected() {
-	log.Println("WS disconnected")
-	comm.status = disconnected
-	comm.conStatChan <- disconnected
-}
-
-func (comm *ACommunicator) isConnected() bool {
-	return comm.status == connected
-}
-
-func (comm *ACommunicator) isConnecting() bool {
-	return comm.status == connecting
+	close(ch)
 }
 
 // Init setups ws connection
 func Init(p InitParams) {
-	comm := factory(p)
+	ctx := context.Background()
+	status := disconnected
+	p.ConStatChan <- status
 
-	headers := http.Header{"x-public-key": {comm.publicKey}}
-	tickerP := time.NewTicker(time.Duration(comm.pingIntervalSec) * time.Second)
+	headers := http.Header{"x-public-key": {p.PublicKey}}
 
-	defer (func() {
-		comm.setDisconnected()
-		tickerP.Stop()
-		comm.awaitingPong = false
-		if comm.conn != nil {
-			comm.conn.Close()
-		}
-		time.Sleep(time.Duration(comm.reconnectTimeoutSec) * time.Second)
-		Init(p)
-	})()
+	tickerPing := time.NewTicker(time.Duration(p.PingIntervalSec) * time.Second)
+	tickerPong := time.NewTicker(time.Duration(p.PingIntervalSec * 3) * time.Second)
 
-	comm.setConnecting()
+	status = connecting
+	p.ConStatChan <- status
 
 	log.Println("Connecting to the platform.")
 
-	c, _, err := websocket.DefaultDialer.Dial(comm.platformUri, headers)
+	dialer := websocket.Dialer{}
+	conn, _, err := dialer.DialContext(ctx, p.PlatformUri, headers)
+
+	done := make(chan bool)
+
+	defer (func() {
+		status := disconnected
+		p.ConStatChan <- status
+
+		tickerPing.Stop()
+		tickerPong.Stop()
+
+		if conn != nil {
+			conn.Close()
+		}
+
+		time.Sleep(time.Duration(p.ReconnectTimeoutSec) * time.Second)
+
+		go Init(p)
+	})()
 
 	if err != nil {
 		log.Println("Connection failed error:", err)
 		return
 	}
 
-	comm.conn = c
+	conn.SetPongHandler(func(d string) error {
+		tickerPong.Reset(time.Duration(p.PingIntervalSec * 3) * time.Second)
 
-	c.SetPongHandler(func(d string) error {
-		comm.awaitingPong = false
 		return nil
 	})
 
-	comm.setConnected()
+
+	status = connected
+	p.ConStatChan <- status
 
 	log.Println("Connected to the platform.")
-
-	done := make(chan struct{})
-
-	go func() {
-		defer close(done)
+	
+	go (func() {
 		for {
-			if !comm.isConnected() {
-				continue
-			}
-
-			_, message, err := c.ReadMessage()
-
-			if err != nil {
-				log.Println("WS receiving error", err)
+			select {
+			case <-done:
 				return
-			}
 
-			if message != nil {
-				comm.receiveChan <- string(message)
+			default:
+				if status != connected {
+					continue
+				}
+
+				_, message, err := conn.ReadMessage()
+
+				if err != nil {
+					log.Println("WS receiving error", err)
+					nicelyClose(done)
+					return
+				}
+
+				if message != nil {
+					p.ReceiveChan <- string(message)
+				}
 			}
 		}
-	}()
+	})()
 
-	tickerP.Reset(time.Duration(comm.pingIntervalSec) * time.Second)
+	tickerPing.Reset(time.Duration(p.PingIntervalSec) * time.Second)
+	tickerPong.Reset(time.Duration(p.PingIntervalSec * 3) * time.Second)
 
 	for {
 		select {
 		case <-done:
 			return
+		case <-tickerPong.C:
+			nicelyClose(done)
+			return
 
-		case <-tickerP.C:
-			if !comm.isConnected() {
+		case <-tickerPing.C:
+			if status != connected {
 				continue
 			}
 
-			if comm.awaitingPong {
-				log.Println("Pong was not received")
-				return
-			}
-
-			c := comm.conn
-
-			err := c.WriteControl(websocket.PingMessage, []byte(comm.publicKey), time.Now().Add(time.Duration(comm.sendTimeoutSec)*time.Second))
-
-			comm.awaitingPong = true
+			err := conn.WriteControl(websocket.PingMessage, []byte(p.PublicKey), time.Now().Add(time.Duration(p.SendTimeoutSec)*time.Second))
 
 			if err != nil {
-				log.Println("WS Ping error:", err)
+				nicelyClose(done)
 				return
 			}
 
-		case msg := <-comm.sendChan:
-			if !comm.isConnected() {
+		case msg := <-p.SendChan:
+			if status != connected {
 				panic("Trying to send data thru closed socket")
 			}
 
-			c := comm.conn
-			c.SetWriteDeadline(time.Now().Add(time.Duration(comm.sendTimeoutSec) * time.Second))
+			conn.SetWriteDeadline(time.Now().Add(time.Duration(p.SendTimeoutSec) * time.Second))
 
-			err := c.WriteMessage(websocket.TextMessage, []byte(msg))
+			err := conn.WriteMessage(websocket.TextMessage, []byte(msg))
 
 			if err != nil {
 				log.Println("Send WS data error:", err)
+				nicelyClose(done)
 				return
 			}
 		}
 	}
-
 }
