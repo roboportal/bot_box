@@ -103,7 +103,7 @@ func (a *AnArena) AreBotsReady() bool {
 func (a *AnArena) disconnectAllBots() {
 	for _, b := range a.Bots {
 		b.SendDataChan <- "{\"type\": \"DISCONNECTED_BY_ADMIN\"}"
-		utils.TriggerChannel(b.QuitWebRTCChan)
+		go utils.TriggerChannel(b.QuitWebRTCChan)
 	}
 }
 
@@ -368,7 +368,7 @@ func (a *AnArena) Run() {
 
 			if data.Action == "DISCONNECT_BOT" {
 				log.Println("Disconnect bot: ", b.ID)
-				utils.TriggerChannel(b.QuitWebRTCChan)
+				go utils.TriggerChannel(b.QuitWebRTCChan)
 
 				continue
 			}
