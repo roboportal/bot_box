@@ -273,7 +273,7 @@ func (b *ABot) Run(p RunParams) {
 
 				p.WsWriteChan <- string(command)
 
-				utils.TriggerChannel(b.QuitWebRTCChan)
+				go utils.TriggerChannel(b.QuitWebRTCChan)
 			}
 
 		case state := <-b.ControlsReadyChan:
