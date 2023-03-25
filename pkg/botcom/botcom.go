@@ -314,7 +314,7 @@ func Init(p InitParams) {
 			case <- p.ClosePeerConnectionChan:
 				log.Println("Closing peer connection")
 
-				if peerConnection.ICEConnectionState() != webrtc.ICEConnectionStateClosed {
+				if peerConnection != nil && peerConnection.ICEConnectionState() != webrtc.ICEConnectionStateClosed {
 					peerConnection.Close()
 				}
 
@@ -329,7 +329,7 @@ func Init(p InitParams) {
 			}
 		}
 		
-		if (peerConnection != nil) {
+		if peerConnection != nil {
 			log.Println(peerConnection.ICEConnectionState().String())
 		}
 		
