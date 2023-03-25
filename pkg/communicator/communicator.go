@@ -56,7 +56,12 @@ func Init(p InitParams) {
 
 		if err != nil {
 			log.Println("Connection failed error:", err)
-			break
+
+			log.Println("Sleeping before reconnecting.")
+
+			time.Sleep(time.Duration(p.ReconnectTimeoutSec) * time.Second)
+			
+			continue
 		}
 
 		conn.SetPongHandler(func(d string) error {
