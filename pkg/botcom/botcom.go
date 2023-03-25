@@ -28,7 +28,7 @@ type InitParams struct {
 	ArenaCandidateChan                chan webrtc.ICECandidateInit
 	WebRTCConnectionStateChan         chan string
 	SendDataChan                      chan string
-	ClosePeerConnectionChan						chan struct{}
+	ClosePeerConnectionChan           chan struct{}
 	QuitWebRTCChan                    chan struct{}
 	BotCommandsWriteChan              chan string
 	ControlsReadyChan                 chan bool
@@ -75,7 +75,7 @@ func Init(p InitParams) {
 			select {
 
 			case description := <-p.DescriptionChan:
-				
+
 				peerConnection, err = p.Api.NewPeerConnection(config)
 
 				if err != nil {
@@ -95,7 +95,7 @@ func Init(p InitParams) {
 
 					go func() {
 						wg.Add(1)
-			      defer wg.Done()
+						defer wg.Done()
 
 						ticker := time.NewTicker(time.Second * 3)
 						defer ticker.Stop()
@@ -186,7 +186,7 @@ func Init(p InitParams) {
 							case <-closeDataChannelChan:
 								log.Println("Closing data channel for bot:", p.Id)
 								haltControls(p.BotCommandsWriteChan, p.Id)
-								defer d.Close() 
+								defer d.Close()
 								return
 							}
 						}
@@ -311,14 +311,12 @@ func Init(p InitParams) {
 					log.Println("AddICECandidate error", err)
 				}
 
-			case <- p.ClosePeerConnectionChan:
+			case <-p.ClosePeerConnectionChan:
 				log.Println("Closing peer connection")
 
-				if peerConnection != nil && peerConnection.ICEConnectionState() != webrtc.ICEConnectionStateClosed {
+				if peerConnection != nil && peerConnection.ICEConnectionState() == webrtc.ICEConnectionStateConnected {
 					peerConnection.Close()
 				}
-
-				go utils.TriggerChannel(p.QuitWebRTCChan)
 
 			case <-p.QuitWebRTCChan:
 				log.Println("Quitting WebRTC for bot:", p.Id)
@@ -328,11 +326,11 @@ func Init(p InitParams) {
 				break
 			}
 		}
-		
+
 		if peerConnection != nil {
 			log.Println(peerConnection.ICEConnectionState().String())
 		}
-		
+
 		close(doneAudioTrack)
 
 		log.Println("Awaiting for audio gorutine to finish.")
