@@ -1,6 +1,7 @@
 package communicator
 
 import (
+	"sync"
 	"log"
 	"net/http"
 	"context"
@@ -32,6 +33,7 @@ type InitParams struct {
 // Init setups ws connection
 func Init(p InitParams) {
 	for {
+		var wg sync.WaitGroup
 		ctx := context.Background()
 		status := disconnected
 		p.ConStatChan <- status
@@ -70,6 +72,10 @@ func Init(p InitParams) {
 		log.Println("Connected to the platform.")
 		
 		go (func() {
+			wg.Add(1)
+
+			defer wg.Done()
+
 			for {
 				select {
 				case <-done:
@@ -98,13 +104,15 @@ func Init(p InitParams) {
 		tickerPing.Reset(time.Duration(p.PingIntervalSec) * time.Second)
 		tickerPong.Reset(time.Duration(p.PingIntervalSec * 3) * time.Second)
 
-		for {
+		for loop := true; loop; {
 			select {
 			case <-done:
+				loop = false
 				break
 
 			case <-tickerPong.C:
 				utils.NicelyClose(done)
+				loop = false
 				break
 
 			case <-tickerPing.C:
@@ -116,12 +124,15 @@ func Init(p InitParams) {
 
 				if err != nil {
 					utils.NicelyClose(done)
+					loop = false
 					break
 				}
 
 			case msg := <-p.SendChan:
 				if status != connected {
-					panic("Trying to send data thru closed socket")
+					log.Println("Trying to send data thru closed socket")
+					loop = false
+					break
 				}
 
 				conn.SetWriteDeadline(time.Now().Add(time.Duration(p.SendTimeoutSec) * time.Second))
@@ -131,6 +142,7 @@ func Init(p InitParams) {
 				if err != nil {
 					log.Println("Send WS data error:", err)
 					utils.NicelyClose(done)
+					loop = false
 					break
 				}
 			}
@@ -145,6 +157,12 @@ func Init(p InitParams) {
 		if conn != nil {
 			conn.Close()
 		}
+
+		log.Println("Awaiting for read gorutine to finish.")
+
+		wg.Wait()
+
+		log.Println("Sleeping before reconnecting.")
 
 		time.Sleep(time.Duration(p.ReconnectTimeoutSec) * time.Second)
 	}

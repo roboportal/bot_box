@@ -13,8 +13,7 @@ func Init(p InitParams) {
 	go func() {
 		for {
 			msg := <-p.SendChan
-			log.Println(msg)
+			log.Println("Console output:", msg)
 		}
 	}()
-
 }

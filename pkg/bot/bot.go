@@ -18,6 +18,7 @@ const (
 )
 
 type ABot struct {
+	ClosePeerConnectionChan   chan struct{}
 	QuitWebRTCChan            chan struct{}
 	WebRTCConnectionStateChan chan string
 	DescriptionChan           chan webrtc.SessionDescription
@@ -110,6 +111,7 @@ func (b *ABot) Run(p RunParams) {
 	}
 
 	go func() {
+		log.Println("Sending create connection message for bot: ", b.ID)
 		p.WsWriteChan <- string(br)
 	}()
 
@@ -125,12 +127,15 @@ func (b *ABot) Run(p RunParams) {
 		WebRTCConnectionStateChan:         b.WebRTCConnectionStateChan,
 		SendDataChan:                      b.SendDataChan,
 		QuitWebRTCChan:                    b.QuitWebRTCChan,
+		ClosePeerConnectionChan:					 b.ClosePeerConnectionChan,	
 		BotCommandsWriteChan:              p.BotCommandsWriteChan,
 		ControlsReadyChan:                 b.ControlsReadyChan,
 		GetAreControlsAllowedBySupervisor: p.GetAreControlsAllowedBySupervisor,
 		GetAreBotsReady:                   p.GetAreBotsReady,
 		IsAudioOutputEnabled:              p.IsAudioOutputEnabled,
 	}
+
+	log.Println("Init webrtc communicator for bot: ", b.ID)
 
 	go botcom.Init(botcomParams)
 
@@ -239,7 +244,6 @@ func (b *ABot) Run(p RunParams) {
 
 			}
 			if state == webrtc.ICEConnectionStateFailed.String() ||
-				state == webrtc.ICEConnectionStateDisconnected.String() ||
 				state == webrtc.ICEConnectionStateClosed.String() {
 				b.SetIdle()
 
@@ -254,7 +258,8 @@ func (b *ABot) Run(p RunParams) {
 					Payload UnblockDisconnectedPayload `json:"payload"`
 				}
 
-				log.Println("Unblocking disconnected bot: ", b.ID)
+				log.Println("Unblocking disconnected bot: ", b.ID, state)
+
 				message := UnblockDisconnectedAction{
 					Name: "UNBLOCK_DISCONNECTED",
 					Payload: UnblockDisconnectedPayload{
@@ -315,6 +320,7 @@ func (b *ABot) Run(p RunParams) {
 func Factory(id int) ABot {
 	return ABot{
 		QuitWebRTCChan:            make(chan struct{}, 1),
+		ClosePeerConnectionChan:   make(chan struct{}, 1),
 		WebRTCConnectionStateChan: make(chan string, 10),
 		DescriptionChan:           make(chan webrtc.SessionDescription, 10),
 		CandidateChan:             make(chan webrtc.ICECandidateInit, 10),
