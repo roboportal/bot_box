@@ -313,7 +313,11 @@ func Init(p InitParams) {
 
 			case <- p.ClosePeerConnectionChan:
 				log.Println("Closing peer connection")
-				peerConnection.Close()
+
+				if peerConnection.ICEConnectionState() != webrtc.ICEConnectionStateClosed {
+					peerConnection.Close()
+				}
+
 				go utils.TriggerChannel(p.QuitWebRTCChan)
 
 			case <-p.QuitWebRTCChan:
