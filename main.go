@@ -154,7 +154,7 @@ func main() {
 		PlatformUri:         srvURL,
 		ReceiveChan:         _arena.WSReadChan,
 		SendChan:            _arena.WSWriteChan,
-		ReconnectTimeoutSec: 1,
+		ReconnectTimeoutSec: 3,
 		PingIntervalSec:     1,
 		SendTimeoutSec:      1,
 		TokenString:         tokenString,
