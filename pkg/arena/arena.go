@@ -221,9 +221,7 @@ func (a *AnArena) Run() {
 			Api:                               api,
 			MediaStream:                       mediaStream,
 			WsWriteChan:                       a.WSWriteChan,
-			WSConStatChan:                     a.WSConStatChan,
 			BotCommandsWriteChan:              a.BotCommandsWriteChan,
-			BotCommandsReadChan:               a.BotCommandsReadChan,
 			GetAreControlsAllowedBySupervisor: a.getAreControlsAllowedBySupervisor,
 			GetAreBotsReady:                   a.getAreBotsReady,
 			SetBotReady:                       a.SetBotReady,
@@ -235,11 +233,17 @@ func (a *AnArena) Run() {
 
 	for {
 		select {
+		case status := <-a.WSConStatChan:
+			for _, b := range a.Bots {
+				b.WSConStatChan <- status
+			}
+
 		case msg := <-a.WSReadChan:
 			type aData struct {
-				Action string
-				Data   string
-				ID     int
+				Action       string
+				ConnectionID string
+				Data         string
+				ID           int
 			}
 
 			var data aData
@@ -288,6 +292,15 @@ func (a *AnArena) Run() {
 			b := a.Bots[data.ID]
 
 			if data.Action == "SET_DESCRIPTION" {
+				if b.ConnectionID == "" {
+					b.ConnectionID = data.ConnectionID
+				}
+
+				if b.ConnectionID != data.ConnectionID {
+					log.Println("Connection IDs missmatch")
+					continue
+				}
+
 				if b.Status != bot.Idle {
 					log.Println("Bot is not connected when set description:", b.ID)
 					continue
@@ -309,6 +322,11 @@ func (a *AnArena) Run() {
 			}
 
 			if data.Action == "SET_CANDIDATE" {
+				if b.ConnectionID != data.ConnectionID {
+					log.Println("Connection IDs missmatch")
+					continue
+				}
+
 				if b.Status != bot.Connecting {
 					log.Println("Bot is not connecting when set candidate:", b.ID)
 					continue

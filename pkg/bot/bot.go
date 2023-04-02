@@ -26,10 +26,12 @@ type ABot struct {
 	ArenaDescriptionChan      chan webrtc.SessionDescription
 	ArenaCandidateChan        chan webrtc.ICECandidateInit
 	SendDataChan              chan string
+	WSConStatChan             chan string
 	ControlsReadyChan         chan bool
 	ID                        int
 	Status                    string
 	IsReady                   bool
+	ConnectionID              string
 }
 
 func (b *ABot) SetIdle() {
@@ -44,6 +46,10 @@ func (b *ABot) SetConnecting() {
 
 func (b *ABot) SetConnected() {
 	b.Status = Connected
+}
+
+func (b *ABot) ClearConnectionID() {
+	b.ConnectionID = ""
 }
 
 func (b *ABot) NotifyAreControlsAllowedBySupervisorChange(state bool) {
@@ -67,9 +73,7 @@ type RunParams struct {
 	Api                               *webrtc.API
 	MediaStream                       mediadevices.MediaStream
 	WsWriteChan                       chan string
-	WSConStatChan                     chan string
 	BotCommandsWriteChan              chan string
-	BotCommandsReadChan               chan string
 	GetAreControlsAllowedBySupervisor func() bool
 	GetAreBotsReady                   func() bool
 	SetBotReady                       func(int)
@@ -127,12 +131,13 @@ func (b *ABot) Run(p RunParams) {
 		WebRTCConnectionStateChan:         b.WebRTCConnectionStateChan,
 		SendDataChan:                      b.SendDataChan,
 		QuitWebRTCChan:                    b.QuitWebRTCChan,
-		ClosePeerConnectionChan:					 b.ClosePeerConnectionChan,	
+		ClosePeerConnectionChan:           b.ClosePeerConnectionChan,
 		BotCommandsWriteChan:              p.BotCommandsWriteChan,
 		ControlsReadyChan:                 b.ControlsReadyChan,
 		GetAreControlsAllowedBySupervisor: p.GetAreControlsAllowedBySupervisor,
 		GetAreBotsReady:                   p.GetAreBotsReady,
 		IsAudioOutputEnabled:              p.IsAudioOutputEnabled,
+		ClearBotConnectionID:              b.ClearConnectionID,
 	}
 
 	log.Println("Init webrtc communicator for bot: ", b.ID)
@@ -298,7 +303,7 @@ func (b *ABot) Run(p RunParams) {
 				p.SetBotNotReady(b.ID)
 			}
 
-		case wsConnectionStatus := <-p.WSConStatChan:
+		case wsConnectionStatus := <-b.WSConStatChan:
 			if wsConnectionStatus == "connected" {
 				log.Println("RE-creating connection for bot: ", b.ID)
 
@@ -328,8 +333,10 @@ func Factory(id int) ABot {
 		ArenaCandidateChan:        make(chan webrtc.ICECandidateInit, 10),
 		SendDataChan:              make(chan string, 1000),
 		ControlsReadyChan:         make(chan bool, 10),
+		WSConStatChan:             make(chan string, 10),
 		ID:                        id,
 		Status:                    Idle,
 		IsReady:                   false,
+		ConnectionID:              "",
 	}
 }

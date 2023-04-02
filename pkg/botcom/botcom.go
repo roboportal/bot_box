@@ -34,6 +34,7 @@ type InitParams struct {
 	ControlsReadyChan                 chan bool
 	GetAreControlsAllowedBySupervisor func() bool
 	GetAreBotsReady                   func() bool
+	ClearBotConnectionID              func()
 	IsAudioOutputEnabled              bool
 }
 
@@ -50,7 +51,6 @@ func enableControls(botCommandsWriteChan chan string, id int) {
 func Init(p InitParams) {
 	for {
 		var wg sync.WaitGroup
-
 		var candidatesMux sync.Mutex
 		var peerConnection *webrtc.PeerConnection
 		var err error
@@ -93,8 +93,8 @@ func Init(p InitParams) {
 						return
 					}
 
+					wg.Add(1)
 					go func() {
-						wg.Add(1)
 						defer wg.Done()
 
 						ticker := time.NewTicker(time.Second * 3)
@@ -266,7 +266,7 @@ func Init(p InitParams) {
 					}
 				}
 
-				if loop == false {
+				if !loop {
 					break
 				}
 
@@ -323,7 +323,6 @@ func Init(p InitParams) {
 				go utils.NicelyClose(closeDataChannelChan)
 
 				loop = false
-				break
 			}
 		}
 
@@ -336,5 +335,7 @@ func Init(p InitParams) {
 		log.Println("Awaiting for audio gorutine to finish.")
 
 		wg.Wait()
+
+		p.ClearBotConnectionID()
 	}
 }
