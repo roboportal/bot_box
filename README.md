@@ -133,28 +133,33 @@ Robot could send it's location and battery data to be presented to user as widge
 ```
 {
   "id": 0,
-  "lat": 49.2766275048836,
-  "lng": -123.13133235249737,
-  "headingAngle": 90,
+  "location": {
+    "lat": 49.2766275048836,
+    "lng": -123.13133235249737,
+    "headingAngle": 90
+  },
   "battery": {
     "min": 18,
     "max": 25.2,
     "value": 24,
     "uom": "V",
     "charging": False
+  },
+  "genericData": {
+    "customKey": "customValue"
   }
 }
 ```
 
-`id` - id of the robot, check 'Controls' section
+### `id` - id of the robot, check 'Controls' section
 
-GPS:
+### GPS (as `location` object):
 
 `lat` - latitude
 `lng` - longitude
 `headingAngle` - magnetic compass angle
 
-Battery (as `battery` object):
+### Battery (as `battery` object):
 
 `min` - minimum possible value
 `max` - maximum possible value
@@ -162,7 +167,11 @@ Battery (as `battery` object):
 `uom` - unit of measure for value (V, % etc)
 `charging` - is charging or not
 
-# Media devices troubleshooting 
+### Custom Data (as `genericData` object):
+
+User specified key-value pairs to be displayed as text.
+
+# Media devices troubleshooting
 
 - To enable Raspberry Pi Camera Module support on Raspbian Bullseye `Legacy Camera Mode` should be enabled with `raspi-config`.
 - [How to use USB audio devices with Raspberry Pi.](https://www.raspberrypi-spy.co.uk/2019/06/using-a-usb-audio-device-with-the-raspberry-pi/)
@@ -171,6 +180,10 @@ Battery (as `battery` object):
 
 Visit the ROBOPORTAL YouTube [channel](https://www.youtube.com/channel/UC-CswhfCJ-i4M9BcoTOE9oA) for the tutorials.
 
-# Contacts:
+# Guides
+
+[Using with arduino and serial port](doc/ARDUINO_SERIAL.md)
+
+# Contacts
 
 [Join our Discord channel](https://discord.gg/2MmWFapCrp) or reach out over email: info@roboportal.io
