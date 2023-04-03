@@ -99,7 +99,12 @@ killasgroup=true
 stopasgroup=true
 ```
 
-6. To start the bot box run `supervisorctl start bot-box`. There are some handy commands: `supervisorctl stop bot-box`, `supervisorctl restart bot-box`, `supervisorctl tail bot-box stdout`.
+6. To start the bot box run `supervisorctl start bot-box`. There are some handy commands: 
+
+- `supervisorctl stop bot-box`
+- `supervisorctl restart bot-box`
+- `supervisorctl tail bot-box stdout`
+- `supervisorctl tail bot-box stderr`
 
 # Messages format
 
