@@ -36,6 +36,7 @@ type InitParams struct {
 	GetAreBotsReady                   func() bool
 	ClearBotConnectionID              func()
 	IsAudioOutputEnabled              bool
+	CameraSelectChan									chan string
 }
 
 func haltControls(botCommandsWriteChan chan string, id int) {
@@ -244,6 +245,22 @@ func Init(p InitParams) {
 						case "NOT_READY":
 							haltControls(p.BotCommandsWriteChan, p.Id)
 							p.ControlsReadyChan <- false
+
+						case "SWITCH_CAMERA":
+
+							type aSeitchCameraMessage struct {
+								Payload string
+							}
+	
+							var data aSeitchCameraMessage
+							err := json.Unmarshal([]byte(message), &data)
+	
+							if err != nil {
+								log.Println("Switch camera message parse error:", err)
+								return
+							}
+
+							p.CameraSelectChan <- data.Payload
 						}
 
 					})

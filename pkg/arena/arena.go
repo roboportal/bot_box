@@ -12,6 +12,7 @@ import (
 
 	"github.com/roboportal/bot_box/pkg/bot"
 	"github.com/roboportal/bot_box/pkg/utils"
+	"github.com/roboportal/bot_box/pkg/cameraselector"
 )
 
 type AnArena struct {
@@ -34,6 +35,8 @@ type AnArena struct {
 	areBotsReady                   bool
 	isAudioInputEnabled            bool
 	isAudioOutputEnabled           bool
+	CameraSelectChan							 chan string
+	cameraMultiplexerEnabled			 bool
 }
 
 type InitParams struct {
@@ -72,6 +75,8 @@ func Factory(p InitParams) AnArena {
 		isAudioOutputEnabled:           p.IsAudioOutputEnabled,
 		areControlsAllowedBySupervisor: true,
 		areBotsReady:                   false,
+
+		CameraSelectChan:        make(chan string, 1),
 	}
 }
 
@@ -154,8 +159,9 @@ func (a *AnArena) Run() {
 
 		if data.Action == "ARENA_CONFIG" {
 			type aPayload struct {
-				AreControlsAllowed bool
-				NBots              int
+				AreControlsAllowed 				bool
+				CameraMultiplexerEnabled  bool
+				NBots              			  int
 			}
 
 			var payload aPayload
@@ -169,6 +175,12 @@ func (a *AnArena) Run() {
 
 			a.setAreControlsAllowedBySupervisor(payload.AreControlsAllowed)
 
+			a.cameraMultiplexerEnabled = payload.CameraMultiplexerEnabled
+
+			if a.cameraMultiplexerEnabled {
+				cameraselector.SelectCameraA()
+			}
+			
 			a.botsCount = payload.NBots
 
 			a.Bots = make([]*bot.ABot, payload.NBots)
@@ -227,6 +239,7 @@ func (a *AnArena) Run() {
 			SetBotReady:                       a.SetBotReady,
 			SetBotNotReady:                    a.SetBotNotReady,
 			IsAudioOutputEnabled:              a.isAudioOutputEnabled,
+			CameraSelectChan:									 a.CameraSelectChan,
 		}
 		go b.Run(botParams)
 	}
@@ -412,6 +425,25 @@ func (a *AnArena) Run() {
 				telemetry := fmt.Sprintf("{\"type\": \"TELEMETRY\", \"payload\": %s}", sanitizedMsg)
 				a.Bots[t.ID].SendDataChan <- telemetry
 			}
-		}
+
+		case cameraChannel := <- a.CameraSelectChan:
+			if !a.cameraMultiplexerEnabled {
+				continue
+			}
+
+			log.Println("Switching camera to:", cameraChannel)
+			
+			if cameraChannel == "A" {
+				cameraselector.SelectCameraA()
+			}
+
+			if cameraChannel == "B" {
+				cameraselector.SelectCameraB()
+			}
+
+			for _, b := range a.Bots {
+				b.SendDataChan <-fmt.Sprintf("{\"type\": \"SWITCH_CAMERA\", \"payload\": \"%s\"}", cameraChannel)
+			}
+			}
 	}
 }

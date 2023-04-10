@@ -1,6 +1,8 @@
 package serial
 
 import (
+	"os"
+	"strconv"
 	"bufio"
 	"log"
 
@@ -22,6 +24,12 @@ type ASerial struct {
 
 // Init setups
 func Init(p InitParams) {
+	debug, err := strconv.ParseBool(os.Getenv("debug"))
+
+	if err != nil {
+		panic(err)
+	}
+	
 	c := &serial.Config{Name: p.PortName, Baud: p.BaudRate}
 	s, err := serial.OpenPort(c)
 
@@ -34,10 +42,15 @@ func Init(p InitParams) {
 		for {
 			select {
 			case msg := <-p.SendChan:
+				if debug {
+					log.Println("Writing message over serial:", msg)
+				}
+
 				_, err := s.Write([]byte(msg + "\n"))
 				if err != nil {
 					log.Println("Serial write error:", err)
 				}
+				
 			}
 		}
 	}()
@@ -47,5 +60,9 @@ func Init(p InitParams) {
 	for scanner.Scan() {
 		data := scanner.Text()
 		p.ReceiveChan <- data
+
+		if debug {
+			log.Println("Received message over serial:", data)
+		}
 	}
 }

@@ -3,6 +3,8 @@ module github.com/roboportal/bot_box
 go 1.14
 
 require (
+	github.com/d2r2/go-i2c v0.0.0-20191123181816-73a8a799d6bc // indirect
+	github.com/d2r2/go-logger v0.0.0-20210606094344-60e9d1233e22 // indirect
 	github.com/faiface/beep v1.1.0
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/gorilla/websocket v1.5.0
@@ -15,6 +17,7 @@ require (
 	github.com/pion/udp v0.1.4 // indirect
 	github.com/pion/webrtc/v3 v3.1.56
 	github.com/rogpeppe/go-internal v1.8.1 // indirect
+	github.com/stianeikeland/go-rpio/v4 v4.6.0 // indirect
 	github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07
 	github.com/zeromq/goczmq v4.1.0+incompatible
 	golang.org/x/exp/shiny v0.0.0-20230224173230-c95f2b4c22f2 // indirect

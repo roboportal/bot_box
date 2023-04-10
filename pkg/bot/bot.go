@@ -79,6 +79,7 @@ type RunParams struct {
 	SetBotReady                       func(int)
 	SetBotNotReady                    func(int)
 	IsAudioOutputEnabled              bool
+	CameraSelectChan          				chan string
 }
 
 type CreateConnectionPayload struct {
@@ -138,6 +139,7 @@ func (b *ABot) Run(p RunParams) {
 		GetAreBotsReady:                   p.GetAreBotsReady,
 		IsAudioOutputEnabled:              p.IsAudioOutputEnabled,
 		ClearBotConnectionID:              b.ClearConnectionID,
+		CameraSelectChan: 								 p.CameraSelectChan,
 	}
 
 	log.Println("Init webrtc communicator for bot: ", b.ID)

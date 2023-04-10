@@ -71,6 +71,8 @@ The list of params:
 - `bot_box_ipc_port` - BotBox ipc port
 - `robot_ipc_port` - robot ipc port
 - `robot_ipc_host` - robot ipc host name
+- `camera_multiplexor_i2c_bus` - i2c bus number for camera multiplexer device
+- `debug` - enable additional logging
 
 # Supervisor setup
 
@@ -103,8 +105,8 @@ stopasgroup=true
 
 - `supervisorctl stop bot-box`
 - `supervisorctl restart bot-box`
-- `supervisorctl tail bot-box stdout`
-- `supervisorctl tail bot-box stderr`
+- `supervisorctl tail -f bot-box stdout`
+- `supervisorctl tail -f bot-box stderr`
 
 # Messages format
 
@@ -175,6 +177,10 @@ Robot could send it's location and battery data to be presented to user as widge
 ### Custom Data (as `genericData` object):
 
 User specified key-value pairs to be displayed as text.
+
+## Camera multiplexer
+
+The Bot Box can utilize a [dual camera adapter](https://www.arducam.com/product/multi-camera-adapter-doubleplexer-stereo-module-v2-raspberry-pi-zero-3-b-4/) for seamless camera switching during operation. This feature is particularly useful for navigation and arm camera control or for switching between forward and backward cameras. To enable this feature, users must simply enable the 'Camera SW' widget in the robot settings.
 
 # Media devices troubleshooting
 
