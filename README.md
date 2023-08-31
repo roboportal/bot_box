@@ -187,6 +187,10 @@ The Bot Box can utilize a [dual camera adapter](https://www.arducam.com/product/
 - To enable Raspberry Pi Camera Module support on Raspbian Bullseye `Legacy Camera Mode` should be enabled with `raspi-config`.
 - [How to use USB audio devices with Raspberry Pi.](https://www.raspberrypi-spy.co.uk/2019/06/using-a-usb-audio-device-with-the-raspberry-pi/)
 
+# Community Projects
+
+- [How to Control a Robot using WebRTC](https://youtu.be/U1lfiY2k7R0?si=xvxKMutFZOh_A8e7) - great tutorial on [robot mania](https://www.youtube.com/@robotmania8896) YouTube channel. 
+
 # Video Tutorials
 
 Visit the ROBOPORTAL YouTube [channel](https://www.youtube.com/channel/UC-CswhfCJ-i4M9BcoTOE9oA) for the tutorials.
