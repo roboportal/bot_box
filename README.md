@@ -18,7 +18,7 @@ It enables peer-to-peer controls, video and audio streaming between robots and w
 
 1. Prepare SD card with Raspberry Pi OS image. [How To guide for Raspberry Pi Imager.](https://www.youtube.com/watch?v=ntaXWS8Lk34) We don't need Desktop version for this application.
 2. Enable camera, SSH (optional, but handy) and set up the WiFi with `raspi-config`. It also make sense to change the default password and set up the auto login. Default GPU memory allocation (128MB) might not be enough for real-time video converting / streaming, so it should be ~256MB. [ Documentation for raspi-config.](https://www.raspberrypi.org/documentation/configuration/raspi-config.md).
-3. Install git and wget (staring from this step you'll need an internet connection)
+3. Install git, wget and other required packages (staring from this step you'll need an internet connection)
 
 ```
 sudo apt update
@@ -28,9 +28,9 @@ sudo apt install git wget libatomic-ops-dev pkg-config libvpx-dev libopus-dev li
 4. Install golang
 
 ```
-wget https://go.dev/dl/go1.19.4.linux-armv6l.tar.gz
-sudo tar -C /usr/local -xzf go1.19.4.linux-armv6l.tar.gz
-rm go1.19.4.linux-armv6l.tar.gz
+wget https://go.dev/dl/go1.21.0.linux-armv6l.tar.gz
+sudo tar -C /usr/local -xzf go1.21.0.linux-armv6l.tar.gz
+rm go1.21.0.linux-armv6l.tar.gz
 ```
 
 5. And configure it:
