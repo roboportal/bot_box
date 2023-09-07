@@ -27,10 +27,20 @@ sudo apt install git wget libatomic-ops-dev pkg-config libvpx-dev libopus-dev li
 
 4. Install golang
 
+Raspberry Pi OS 32 bit:
+
 ```
 wget https://go.dev/dl/go1.21.0.linux-armv6l.tar.gz
 sudo tar -C /usr/local -xzf go1.21.0.linux-armv6l.tar.gz
 rm go1.21.0.linux-armv6l.tar.gz
+```
+
+Raspberry Pi OS 64 bit:
+
+```
+wget https://go.dev/dl/go1.21.0.linux-arm64.tar.gz
+sudo tar -C /usr/local -xzf go1.21.0.linux-arm64.tar.gz
+rm go1.21.0.linux-arm64.tar.gz
 ```
 
 5. And configure it:
@@ -47,9 +57,12 @@ rm go1.21.0.linux-armv6l.tar.gz
    `git clone https://github.com/roboportal/bot_box.git`
 
 7. Navigate to the repo: `cd ./bot_box`
-8. And compile the BotBox: `CGO_LDFLAGS="-latomic" go build -tags=arm` for raspberry or `go build` for mac.
-9. Create `.env` file for the configuration [following the instructions](#botbox-configuration).
-10. Run the bot by executing: `./bot_box`
+8. And compile the BotBox:
+   - Raspberry Pi OS 32 bit: `CGO_LDFLAGS="-latomic" go build -tags=arm`
+   - Raspberry Pi OS 64 bit: `CGO_LDFLAGS="-latomic" go build -tags=arm64`
+   - Mac: `go build`
+11. Create `.env` file for the configuration [following the instructions](#botbox-configuration).
+12. Run the bot by executing: `./bot_box`
 
 # BotBox configuration
 
@@ -190,6 +203,10 @@ The Bot Box can utilize a [dual camera adapter](https://www.arducam.com/product/
 # Community Projects
 
 - [How to Control a Robot using WebRTC](https://youtu.be/U1lfiY2k7R0?si=xvxKMutFZOh_A8e7) - great tutorial on [robot mania](https://www.youtube.com/@robotmania8896) YouTube channel. 
+
+# Design Examples
+
+- [Examples of robots built with roboportal](https://github.com/roboportal/bot_design_examples)
 
 # Video Tutorials
 
